@@ -1,6 +1,6 @@
 ![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg)
 
-## Lisa 8-Bit processor SOC
+## Little ISA (Lisa) 8-Bit processor SOC
 
 This project includes a 32x32 (1024 bits) DFFRAM macro with a single read/write port (1RW). 
 

@@ -1,0 +1,67 @@
+# Tiny Tapeout project information
+project:
+  title:        "LISA SOC (128 bytes)"
+  author:       "Ken Pettit"
+  discord:      "busy_courgette_50064"
+  description:  "8-Bit Processor SOC with 128 bytes DFFRAM module"
+  language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
+  clock_hz:     50000000       # Clock frequency in Hz (or 0 if not applicable)
+
+  # How many tiles your design occupies? A single tile is about 167x108 uM.
+  tiles: "8x2"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2 or 8x2
+
+  # Your top module name must start with "tt_um_". Make it unique by including your github username:
+  top_module:  "tt_um_lisa"
+
+  # List your project's source files here. Source files must be in ./src and you must list each source file separately, one per line:
+  source_files:
+    - "tt_um_lisa.v"
+    - "RAM32.v"
+    - "lisa_core.v"
+    - "lisa_dbg.v"
+    - "lisa_div.v"
+    - "lisa_periph.v"
+    - "lisa_io_mux.v"
+    - "lisa_qqspi.v"
+    - "lisa_qspi_controller.v"
+    - "lisa_rx8n.v"
+    - "lisa_tx8n.v"
+    - "debug_ctrl.v"
+    - "debug_autobaud.v"
+    - "debug_brg.v"
+    - "debug_regs.v"
+
+# The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
+pinout:
+  # Inputs
+  ui[0]: "porta_in[0]"
+  ui[1]: "porta_in[1]"
+  ui[2]: "porta_in[2]"
+  ui[3]: "porta_in[3]/debug_rx"
+  ui[4]: "porta_in[4]"
+  ui[5]: "porta_in[5]"
+  ui[6]: "porta_in[6]"
+  ui[7]: "porta_in[7]"
+
+  # Outputs
+  uo[0]: "porta_out[0]"
+  uo[1]: "porta_out[1]"
+  uo[2]: "porta_out[2]"
+  uo[3]: "porta_out[3]"
+  uo[4]: "porta_out[4]/debug_tx"
+  uo[5]: "porta_out[5]"
+  uo[6]: "porta_out[6]"
+  uo[7]: "porta_out[7]"
+
+  # Bidirectional pins
+  uio[0]: "spi_cs"
+  uio[1]: "spi_mosi"
+  uio[2]: "spi_miso"
+  uio[3]: "spi_sclk"
+  uio[4]: "portb_io[0]/debug_rx"
+  uio[5]: "portb_io[1]/debug_tx"
+  uio[6]: "portb_io[2]/spi_dq2/debug_rx"
+  uio[7]: "portb_io[3]/spi_dq3"
+
+# Do not change!
+yaml_version: 6

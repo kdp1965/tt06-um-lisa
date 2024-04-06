@@ -1,0 +1,13 @@
+.DS_Store
+.idea
+.vscode
+*.vcd
+runs
+src/__tinytapeout
+test/__pycache__/
+test/gate_level_netlist.v
+test/results.xml
+test/sim_build
+failures_report.json
+abc.history
+tt

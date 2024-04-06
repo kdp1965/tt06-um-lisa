@@ -57,8 +57,8 @@
     "sky130_ef_sc_hd__decap_12"
   ],
 
-  "//": "period is in ns, so 20ns == 50mHz",
-  "CLOCK_PERIOD": 20,
+  "//": "period is in ns, so 50ns == 20mHz",
+  "CLOCK_PERIOD": 50,
   "CLOCK_PORT": "clk",
 
   "//": "don't use power rings or met5",

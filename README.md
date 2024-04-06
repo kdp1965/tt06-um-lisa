@@ -2,7 +2,14 @@
 
 ## Little ISA (Lisa) 8-Bit processor SOC
 
-This project includes a 32x32 (1024 bits) DFFRAM macro with a single read/write port (1RW). 
+This project includes a 32x32 (1024 bits) DFFRAM macro with a single read/write port (1RW) which it
+uses as a DATA CACHE for the 8-bit processor data bus.  The Instruction bus is implemented over the
+SPI / QuadSPI port to either the RP2040 or an external SPI FLASH or SPI SRAM chip.  
+
+Interface to the project is via UART (auto-senses the port and auto detects the baud rate).  The
+debug interface allos programming of the SPI SRAM, erasing and programming a SPI FLASH, and 
+accessing the LISA core debug features including register access, stop and resume, setting 
+breakpoints, viewing and modifying RAM contents, etc.
 
 The size of this project is 2x8 tiles.
 

@@ -141,10 +141,10 @@ module tt_um_lisa
    // ==========================================================================
    wire    [7:0]        porta;
    wire    [7:0]        porta_in;   
-   wire    [7:0]        porta_dir;
-   wire    [7:0]        portb;
-   wire    [7:0]        portb_in;   
-   wire    [7:0]        portb_dir;
+//   wire    [7:0]        porta_dir;
+   wire    [3:0]        portb;
+   wire    [3:0]        portb_in;
+   wire    [3:0]        portb_dir;
 
    // ==========================================================================
    // Lisa UART signals
@@ -287,6 +287,10 @@ module tt_um_lisa
    // ==========================================================================
    RAM32 ram1
    (
+`ifdef USE_POWER_PINS
+      .VPWR(VPWR),
+      .VGND(VGND),
+`endif
       .CLK                 ( clk                  ),
       .WE0                 ( ram_we               ),
       .EN0                 ( 1'b1                 ),
@@ -327,7 +331,7 @@ module tt_um_lisa
       // GPIO signals                           
       .porta               ( porta              ),
       .porta_in            ( porta_in           ),
-      .porta_dir           ( porta_dir          ),
+//      .porta_dir           ( porta_dir          ),
       .portb               ( portb              ),
       .portb_in            ( portb_in           ),
       .portb_dir           ( portb_dir          ),

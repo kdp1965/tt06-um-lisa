@@ -121,9 +121,9 @@ module lisa_io_mux
    // LISA peripheral Port signals
    input  wire [7:0]       lisa_porta_i,        // Outputs from Port A peripheral
    output wire [7:0]       lisa_porta_o,        // Inputs to Port A peripheral
-   input  wire [7:0]       lisa_portb_i,        // Outputs from Port A peripheral
-   input  wire [7:0]       lisa_portb_dir_i,    // Port B direction register
-   output wire [7:0]       lisa_portb_o,        // Inputs to Port A peripheral
+   input  wire [3:0]       lisa_portb_i,        // Outputs from Port A peripheral
+   input  wire [3:0]       lisa_portb_dir_i,    // Port B direction register
+   output wire [3:0]       lisa_portb_o,        // Inputs to Port A peripheral
 
    // UART signals
    input  wire             baud_ref,            // Baud rate reference clock

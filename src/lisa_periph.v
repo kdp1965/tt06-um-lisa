@@ -72,10 +72,10 @@ module lisa_periph
    // GPIO
    output reg [7:0]     porta,
    input  wire [7:0]    porta_in,
-   output reg [7:0]     porta_dir,
-   output reg [7:0]     portb,
-   input  wire [7:0]    portb_in,
-   output reg [7:0]     portb_dir,
+//   output reg [7:0]     porta_dir,
+   output reg [3:0]     portb,
+   input  wire [3:0]    portb_in,
+   output reg [3:0]     portb_dir,
 
    // UART
    output wire [7:0]    uart_tx_d,
@@ -94,7 +94,7 @@ module lisa_periph
    reg                  ms_enable;
    reg                  ms_rollover;
    wire  [7:0]          porta_read;
-   wire  [7:0]          portb_read;
+   wire  [3:0]          portb_read;
 
    always @(posedge clk)
    begin
@@ -119,16 +119,16 @@ module lisa_periph
             porta <= d_i;
 
          // Latch input data as PORTA_DIR
-         if (d_periph && d_we && d_addr == 7'h01)
-            porta_dir <= d_i;
+//         if (d_periph && d_we && d_addr == 7'h01)
+//            porta_dir <= d_i;
 
          // Latch input data as PORTB
          if (d_periph && d_we && d_addr == 7'h02)
-            portb <= d_i;
+            portb <= d_i[3:0];
 
          // Latch input data as PORTB_DIR
          if (d_periph && d_we && d_addr == 7'h03)
-            portb_dir <= d_i;
+            portb_dir <= d_i[3:0];
 
          // ==============================================
          // Timer signals
@@ -205,7 +205,11 @@ module lisa_periph
    genvar x;
    for (x = 0; x < 8; x = x + 1)
    begin
-      assign porta_read[x] = porta_dir[x] ? porta[x] : porta_in[x];
+      //assign porta_read[x] = porta_dir[x] ? porta[x] : porta_in[x];
+      assign porta_read[x] = porta_in[x];
+   end
+   for (x = 0; x < 4; x = x + 1)
+   begin
       assign portb_read[x] = portb_dir[x] ? portb[x] : portb_in[x];
    end
    endgenerate 
@@ -215,9 +219,9 @@ module lisa_periph
       case (d_addr)
       // GPIO readback
       7'h00:   d_o <= porta_read;
-      7'h01:   d_o <= porta_dir;
-      7'h02:   d_o <= portb_read;
-      7'h03:   d_o <= portb_dir;
+//      7'h01:   d_o <= porta_dir;
+      7'h02:   d_o <= {4'h0, portb_read};
+      7'h03:   d_o <= {4'h0, portb_dir};
 
       // Timer readback
       7'h08:   d_o <= ms_prediv[7:0];

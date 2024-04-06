@@ -128,7 +128,7 @@ module lisa_dbg
          d_access_r <= 1'b0;
          d_active_r <= 1'b0;
          for (i = 0; i < DBG_BRKPOINTS; i = i + 1)
-            brk_r[i] <= {PC_BITS{1'b0}};
+            brk_r[i] <= {(PC_BITS+1){1'b0}};
       end
       else
       begin

@@ -1048,6 +1048,7 @@ module lisa_core
       if (!rst_n || reset)
       begin
          cflag_save        <= 1'b0;
+         signed_inv_save   <= 1'b0;
       end
       else
       begin
@@ -1072,8 +1073,8 @@ module lisa_core
    assign cflag_load = c_load && exec_state && cond[0];
 
    generate
-   if (WANT_MUL)
-   begin
+   if (WANT_DIV)
+   begin : GEN_DIV
       lisa_div 
       #(
             .PC_BITS(PC_BITS)
@@ -1113,10 +1114,9 @@ module lisa_core
          .ldx_stage_two_val    ( ldx_stage_two_val    ),
          .ldx_stage_two_load   ( ldx_stage_two_load   )
       );
-
    end
    else
-   begin
+   begin : GEN_NO_DIV
       assign div_result = 16'h0;
       assign div_ready = 1'b0;
 
@@ -1136,8 +1136,10 @@ module lisa_core
          else
          begin
             if (cflag_load)
+            begin
                cflag_r <= c_val;
                signed_inv_r <= signed_inv_val;
+            end
 
             if (zflag_load)
                zflag_r <= zflag_val;
@@ -1154,6 +1156,7 @@ module lisa_core
       reg                        ix_cond_r;
       reg [PC_BITS-1:0]          ra_r;
       reg                        ra_cond_r;
+      reg                        ldx_stage_two_r;
 
       always @(posedge clk)
       begin
@@ -1163,6 +1166,7 @@ module lisa_core
             ix_cond_r <= 1'b0;
             ra_r      <= {PC_BITS{1'b0}};
             ra_cond_r <= 1'b0;
+            ldx_stage_two_r <= 1'b0;
          end
          else
          begin
@@ -1176,12 +1180,17 @@ module lisa_core
                ra_r      <= ra_val;
                ra_cond_r <= ra_cond_val;
             end
+            if (ldx_stage_two_load)
+            begin
+               ldx_stage_two_r <= ldx_stage_two_val;
+            end
          end
       end
       assign ix      = ix_r;
       assign ix_cond = ix_cond_r;
       assign ra      = ra_r;
       assign ra_cond = ra_cond_r;
+      assign ldx_stage_two = ldx_stage_two_r;
    end
    endgenerate
 
@@ -1322,6 +1331,8 @@ module lisa_core
       // No debugger
       assign dbg_do       = {PC_BITS{1'b0}};
       assign stop         = 1'b0;
+      assign cont_q       = 1'b0;
+      assign dbg_ready    = 1'b1;
 
       assign dbg_d_addr   = {D_BITS{1'b0}};
       assign dbg_d_we     = 1'b0;

@@ -1,6 +1,6 @@
 {
   "DESIGN_NAME": "tt_um_lisa",
-  "VERILOG_FILES": ["src/tt_um_lisa.v", "src/lisa_core.v",
+  "VERILOG_FILES": ["src/tt_um_lisa.v",     "src/lisa_core.v",
                     "src/lisa_dbg.v",       "src/lisa_div.v",
                     "src/lisa_periph.v",    "src/lisa_io_mux.v",
                     "src/lisa_qqspi.v",     "src/lisa_qspi_controller.v",

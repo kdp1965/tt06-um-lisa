@@ -7,7 +7,7 @@ uses as a DATA CACHE for the 8-bit processor data bus.  The Instruction bus is i
 SPI / QuadSPI port to either the RP2040 or an external SPI FLASH or SPI SRAM chip.  
 
 Interface to the project is via UART (auto-senses the port and auto detects the baud rate).  The
-debug interface also programming of the SPI SRAM, erasing and programming a SPI FLASH, and 
+debug interface also supports programming the SPI SRAM, erasing and programming a SPI FLASH, and 
 accessing the LISA core debug features including register access, stop and resume, setting 
 breakpoints, viewing and modifying RAM contents, etc.
 

@@ -139,7 +139,7 @@ Uses a 14 (or 16) bit program word.  Shown is the 14-bit version.  For 16-bit, e
 module lisa_core
 #(
       parameter WANT_MUL       = 1,
-      parameter WANT_DIV       = 1,
+      parameter WANT_DIV       = 0,
       parameter PC_BITS        = 15,
       parameter D_BITS         = 15,       // NOTE: Up to PC_BITS
       parameter WANT_DBG       = 1,

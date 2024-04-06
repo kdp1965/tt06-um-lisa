@@ -98,7 +98,9 @@ module lisa_dbg
 
    reg               halted;
    wire              cont;
-   reg  [PC_BITS:0]  brk_r[DBG_BRKPOINTS-1:0];
+   wire [PC_BITS:0]  brk_r[DBG_BRKPOINTS-1:0];
+   reg  [PC_BITS:0]  brk_r0;
+   reg  [PC_BITS:0]  brk_r1;
    reg               brk_halt;
    reg               d_access_r;
    reg               d_active_r;
@@ -127,8 +129,10 @@ module lisa_dbg
          access_state <= 2'h0;
          d_access_r <= 1'b0;
          d_active_r <= 1'b0;
-         for (i = 0; i < DBG_BRKPOINTS; i = i + 1)
-            brk_r[i] <= {(PC_BITS+1){1'b0}};
+//         for (i = 0; i < DBG_BRKPOINTS; i = i + 1)
+//            brk_r[i] <= {(PC_BITS+1){1'b0}};
+         brk_r0 <= 16'h0;
+         brk_r1 <= 16'h0;
       end
       else
       begin
@@ -158,7 +162,18 @@ module lisa_dbg
 
          // Breakpoint register write
          if (dbg_we & dbg_a[3])
-            brk_r[dbg_a[2:0]] <= dbg_di[PC_BITS:0];   
+         begin
+            if (dbg_a[2:0] == 3'h0)
+               brk_r0 <= dbg_di[PC_BITS:0];
+            if (dbg_a[2:0] == 3'h1)
+               brk_r1 <= dbg_di[PC_BITS:0];
+
+//            for (i = 0; i < DBG_BRKPOINTS; i++)
+//            begin : GEN_BRK
+//               if (dbg_a[2:0] == i)
+//                  brk_r[i][PC_BITS:0] <= dbg_di[PC_BITS:0];   
+//            end
+         end
 
          // Data bus register write
          if (dbg_we & dbg_a == 8'h7)
@@ -210,6 +225,8 @@ module lisa_dbg
    Logic to test for PC match break
    ================================================================
    */
+   assign brk_r[0] = brk_r0;
+   assign brk_r[1] = brk_r1;
    always @*
    begin
       brk_halt = 1'b0;

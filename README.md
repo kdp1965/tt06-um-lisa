@@ -11,7 +11,14 @@ debug interface allos programming of the SPI SRAM, erasing and programming a SPI
 accessing the LISA core debug features including register access, stop and resume, setting 
 breakpoints, viewing and modifying RAM contents, etc.
 
+The Debugger UART is also available to the LISA processor core by sending it an 'l' command.  After
+that, the LISA processor can send / receive data over the UART.  Issuing a "+++" command with a
+0.5s guard time before / after will connect the UART back to the debugger.
+
 The size of this project is 2x8 tiles.
+
+I have written (in C) and assembler, linker and C compiler (still a work in progress).  Also I have
+a Python based debugger that can load and verify the SPI FLASH, start and stop the core, view registers, etc.
 
 More documentation to come...
 

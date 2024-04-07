@@ -1,4 +1,4 @@
-`default_nettype none
+`default_nettype wire
 `timescale 1ns / 1ps
 
 /*
@@ -9,18 +9,18 @@ that can be driven / tested by the cocotb test.py
 module tb
 (
    // testbench is controlled by test.py
-   input          clk,
-   input          rst_n,
-   input          ena,
-   input [7:0]    tx_d,
-   input          tx_wr,
-   output         tx_buf_empty,
-   input          rx_rd,
-   output [7:0]   rx_d,
-   output         rx_avail,
-   input  [1:0]   uart_port_sel,
-   input  [7:0]   porta_in,
-   output [7:0]   porta_out
+   input  wire          clk,
+   input  wire          rst_n,
+   input  wire          ena,
+   input  wire  [7:0]   tx_d,
+   input  wire          tx_wr,
+   output wire          tx_buf_empty,
+   input  wire          rx_rd,
+   output wire  [7:0]   rx_d,
+   output wire          rx_avail,
+   input  wire  [1:0]   uart_port_sel,
+   input  wire  [7:0]   porta_in,
+   output wire  [7:0]   porta_out
 );
 
    wire     [7:0] ui_in;
@@ -36,6 +36,12 @@ module tb
    wire           dq1;
    wire           dq2;
    wire           dq3;
+
+   wire           baud_ref;
+   wire           txd;
+   wire           rxd;
+   wire           baud_set;
+   wire [6:0]     baud_div;
 
    // this part dumps the trace to a vcd file that can be viewed with GTKWave
    initial begin
@@ -90,12 +96,6 @@ module tb
    // ==========================================================================
    // Create a testbench UART to interface with the design
    // ==========================================================================
-   wire        baud_ref;
-   wire        txd;
-   wire        rxd;
-   wire        baud_set;
-   wire [6:0]  baud_div;
-
    lisa_tx8n i_tx8n
    (
       .clk        ( clk          ),
@@ -130,7 +130,7 @@ module tb
       .baud_ref   ( baud_ref     )
    );
    assign baud_set = 1'b1;
-   assign baud_div = 7'd20;
+   assign baud_div = 7'd81;
 
    // ==========================================================================
    // Assign the port I/O

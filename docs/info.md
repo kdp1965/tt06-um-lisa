@@ -1,7 +1,7 @@
 ## How it works
 
+<pre>                                                                                                      
 
-                                                                                                      
               |\         +-------------------+                +--------------------+     +-------------------+ 
  rx1  -----*->| |        |                   |                |                    |     |                   |
            |  | |        |   debug_ctrl      +--------------->|    lisa_qspi       |     |   lisa_qqspi      | QSPI Pins
@@ -17,7 +17,8 @@
       |  autobaud  |       | debug_regs   |    +---------+    |                    |     |    RAM      |       
       |            |       |              |    |  RAM32  |<-->|                    |     |   access    |    
       +------------+       +--------------+    +---------+    +--------------------+     +-------------+    
-                                                          
+
+</pre>                                                          
                                                                            
                                                                                                          
 This is an 8-Bit Little ISA (LISA) processor.  It includes the following:

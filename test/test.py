@@ -2,6 +2,9 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
 
+# ==================================================
+# Write a byte to the UART
+# ==================================================
 async def send_tx_byte(dut, data):
    # Wait for the UART TX to be ready 
    while not dut.tx_buf_empty.value:
@@ -15,6 +18,9 @@ async def send_tx_byte(dut, data):
    dut.tx_wr.value = 0
    await ClockCycles(dut.clk, 2)
 
+# ==================================================
+# Read a byte from the UART
+# ==================================================
 async def read_rx_byte(dut):
    # Wait for the UART TX to be ready 
    while not dut.rx_avail.value:
@@ -50,22 +56,22 @@ async def test_lisa(dut):
     dut.rst_n.value = 1
     await ClockCycles(dut.clk, 32)
 
-    # Send a \n character
+    # Send a \n character to set the Baud rate
     await send_tx_byte(dut, 0x0a)
 
+    # Wait a while for baud rate determination
+    await ClockCycles(dut.clk, 131072)
+
+    # ======================================================
+    # Send CR to the debug interface and test for response
+    # ======================================================
     await send_tx_byte(dut, 0x0a)
+
+    # Read the LF
     retval = await read_rx_byte(dut)
     dut._log.info(f'retval = 0x{int(retval):02x}')
 
-    await send_tx_byte(dut, 0x0a)
-    retval = await read_rx_byte(dut)
-    dut._log.info(f'retval = 0x{int(retval):02x}')
-
-    await send_tx_byte(dut, 0x0a)
-    retval = await read_rx_byte(dut)
-    dut._log.info(f'retval = 0x{int(retval):02x}')
-
-    await send_tx_byte(dut, 0x0a)
+    # Read the CR
     retval = await read_rx_byte(dut)
     dut._log.info(f'retval = 0x{int(retval):02x}')
 

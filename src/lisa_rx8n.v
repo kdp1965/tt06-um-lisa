@@ -77,7 +77,7 @@ module lisa_rx8n
       else
       begin
          // Detect rd on rising edge of read clock
-         if (rd & ~s_last_rd)
+         if (rd & ~s_last_rd && buffer_full)
             s_rd_idx <= ~s_rd_idx;
 
          s_last_rd <= rd;
@@ -104,8 +104,8 @@ module lisa_rx8n
          // Create baud_ref edge detect
          s_baud_edge <= baud_ref;
 
-         // If we have data in the FIFO and none nin the output buffer,
-         // then coy FIFO to output buffer.
+         // If we have data in the FIFO and none in the output buffer,
+         // then copy FIFO to output buffer.
          if (s_rd_idx == s_wr_idx)
          begin
             buffer_full <= 1'b0;
@@ -145,7 +145,8 @@ module lisa_rx8n
                   begin
                      buffer_full <= 1'b1;       // Indicate data available
                      dbuf <= shift;             // Save Data
-                     s_wr_idx <= ~s_wr_idx;     // Update write index
+                     if (!buffer_full || (buffer_full && rd))
+                        s_wr_idx <= ~s_wr_idx;     // Update write index
                      bit_count <= 160;
                   end
                   else

@@ -44,7 +44,7 @@ module debug_autobaud
 );
 
    reg               s_div_found;               // Indicates if division found
-   reg [12:0]        s_pulse_width;             // Pulse width in clks
+   reg [13:0]        s_pulse_width;             // Pulse width in clks
    reg [7:0]         s_bit_div1;
    reg [7:0]         s_bit_div2;
    reg [7:0]         s_bit_div3;
@@ -52,8 +52,11 @@ module debug_autobaud
    reg               s_last_rx2;                // Last registered value of rx
    reg               s_last_rx3;                // Last registered value of rx
    reg [1:0]         s_rx_sel;                  // Last registered value of rx
+   reg               s_done;
+   wire              s_sel_rx;
 
    assign div = s_bit_div1;                     // Use any of the calculated divs
+   assign s_sel_rx = s_rx_sel == 2'h1 ? rx1 : s_rx_sel == 2'h2 ? rx2 : s_rx_sel == 2'h3 ? rx3 : 1'b0;
 
    always @(posedge clk)
    begin
@@ -64,12 +67,13 @@ module debug_autobaud
          s_bit_div1     <= 8'h0;
          s_bit_div2     <= 8'h0;
          s_bit_div3     <= 8'h0;
-         s_pulse_width  <= 13'h0;
+         s_pulse_width  <= 15'h0;
          s_last_rx1     <= 1'b0;
          s_last_rx2     <= 1'b0;
          s_last_rx2     <= 1'b0;
          rx_sel         <= 2'h0;
          s_rx_sel       <= 2'h0;
+         s_done         <= 1'b0;
       end
       else
       begin
@@ -96,10 +100,10 @@ module debug_autobaud
                   s_div_found <= 1'b1;
 
                // Reset the pulse width counter
-               s_pulse_width <= 13'h0;
+               s_pulse_width <= 14'h0;
                
                // If this is a valid pulse, then save the last 3 pulses
-               if (s_pulse_width != 13'h1FFF)
+               if (s_pulse_width != 14'h3FFF)
                begin
                   // Save the new pulse divider and shift the others
                   s_bit_div1 <= s_pulse_width[12 -: 8];
@@ -110,7 +114,7 @@ module debug_autobaud
             else
             begin
                // Create a pulse width counter
-               if (s_pulse_width != 13'h1FFF)
+               if (s_pulse_width != 14'h3FFF)
                   s_pulse_width <= s_pulse_width + 1;
 
                // Test for 3 equivalent divisors
@@ -119,7 +123,6 @@ module debug_autobaud
                begin
                   // We found the divisor
                   s_div_found <= 1'b1;
-                  rx_sel      <= s_rx_sel;
 
                   // Write the divisor to the baud rate generator
                   wr <= 1'b1;
@@ -127,7 +130,39 @@ module debug_autobaud
             end
          end
          else
+         begin
+            // We found the pulse.  Now wait for the end of the data byte
+            // before updating rx_sel 
             wr <= 1'b0;
+
+            // If pulse width not max, then track RX changes
+            if (s_pulse_width != 14'h3FFF)
+            begin
+               s_last_rx1 <= rx1;
+               s_last_rx2 <= rx2;
+               s_last_rx3 <= rx3;
+            end
+
+            if ((rx1 != s_last_rx1) || (rx2 != s_last_rx2) || (rx3 != s_last_rx3))
+            begin
+               // Reset the pulse width counter
+               if (!s_done)
+                  s_pulse_width <= 14'h0;
+            end
+            else
+            begin
+               // Create a pulse width counter
+               if (s_pulse_width != 14'h3FFF)
+                  s_pulse_width <= s_pulse_width + 1;
+
+               // When pulse_width is max, update rx_sel
+               if (disabled || (s_pulse_width == 14'h3FFF && s_sel_rx == 1'b1))
+               begin
+                  rx_sel <= s_rx_sel;
+                  s_done   <= 1'b1;
+               end
+            end
+         end
       end
    end
 

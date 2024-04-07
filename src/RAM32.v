@@ -1,6 +1,6 @@
 /// sta-blackbox
 
-`default_nettype none
+`default_nettype wire
 
 module RAM32 (
 `ifdef USE_POWER_PINS

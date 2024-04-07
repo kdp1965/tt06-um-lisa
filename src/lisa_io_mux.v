@@ -161,7 +161,7 @@ module lisa_io_mux
    assign debug_rx = rx_sel == 2'h1 ? ui_in[3] :      // Input from RP2040
                      rx_sel == 2'h2 ? uio_in[6] :     // Input from PMOD UART
                      rx_sel == 2'h3 ? uio_in[4] :     // Input from PMOD Custom board
-                     1'b0;
+                     1'b1;                            // No RX data
 
    // ==========================================================================
    // Generate output pin MUX for each output pin
@@ -179,7 +179,7 @@ module lisa_io_mux
 
    // Assign default outputs
    assign out_default[3:0] = 4'h0;
-   assign out_default[4] = rx_sel == 2'h1 ? debug_tx : 1'b0;
+   assign out_default[4] = rx_sel == 2'h1 ? debug_tx : 1'b1;
    assign out_default[6:5] = 2'h0;
    assign out_default[7] = baud_ref;
 
@@ -188,7 +188,7 @@ module lisa_io_mux
    assign periph_sel1[1] = 1'b0;
    assign periph_sel1[2] = 1'b0;
    assign periph_sel1[3] = 1'b0;
-   assign periph_sel1[4] = rx_sel == 2'h1 ? debug_tx : 1'b0;
+   assign periph_sel1[4] = rx_sel == 2'h1 ? debug_tx : 1'b1;
    assign periph_sel1[5] = 1'b0;
    assign periph_sel1[6] = 1'b0;
    assign periph_sel1[7] = 1'b0;

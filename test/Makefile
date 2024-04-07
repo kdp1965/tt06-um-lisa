@@ -17,7 +17,7 @@ VERILOG_SOURCES += $(SRC)/lisa_qspi_controller.v $(SRC)/lisa_io_mux.v
 VERILOG_SOURCES += $(SRC)/lisa_div.v
 VERILOG_SOURCES += $(SRC)/debug_ctrl.v $(SRC)/debug_autobaud.v
 VERILOG_SOURCES += $(SRC)/debug_brg.v $(SRC)/debug_regs.v
-VERILOG_SOURCES += $(PWD)/psram.v $(SRC)/spiflash.v
+VERILOG_SOURCES += $(PWD)/psram.v $(PWD)/spiflash.v
 
 else
 
@@ -33,7 +33,7 @@ VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/verilog/sky130_f
 # this gets copied in by the GDS action workflow
 VERILOG_SOURCES += $(PWD)/tb.v $(PWD)/gate_level_netlist.v $(PWD)/../macros/RAM32.pnl.v
 VERILOG_SOURCES += $(SRC)/lisa_rx8n.v $(SRC)/lisa_tx8n.v $(SRC)/debug_brg.v
-VERILOG_SOURCES += $(PWD)/psram.v $(SRC)/spiflash.v
+VERILOG_SOURCES += $(PWD)/psram.v $(PWD)/spiflash.v
 endif
 
 # TOPLEVEL is the name of the toplevel module in your Verilog or VHDL file

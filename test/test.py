@@ -6,9 +6,15 @@ from cocotb.triggers import ClockCycles
 # Write a byte to the UART
 # ==================================================
 async def send_tx_byte(dut, data):
+   int   count = 0
+
    # Wait for the UART TX to be ready 
-   while not dut.tx_buf_empty.value:
+   while not dut.tx_buf_empty.value and count < 200000:
       await ClockCycles(dut.clk, 1)
+      count = count + 1
+
+   # Test for timeout
+   assert count != 200000
 
    # Configure the write
    dut.tx_d.value = data
@@ -22,9 +28,15 @@ async def send_tx_byte(dut, data):
 # Read a byte from the UART
 # ==================================================
 async def read_rx_byte(dut):
+   int   count = 0
+
    # Wait for the UART TX to be ready 
-   while not dut.rx_avail.value:
+   while not dut.rx_avail.value and count < 200000:
       await ClockCycles(dut.clk, 1)
+      count = count + 1
+
+   # Test for timeout
+   assert count != 200000
 
    # Perform a read
    retval = dut.rx_d.value

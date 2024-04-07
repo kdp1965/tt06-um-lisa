@@ -58,7 +58,7 @@ module debug_autobaud
    assign div = s_bit_div1;                     // Use any of the calculated divs
    assign s_sel_rx = s_rx_sel == 2'h1 ? rx1 : s_rx_sel == 2'h2 ? rx2 : s_rx_sel == 2'h3 ? rx3 : 1'b0;
 
-   always @(posedge clk)
+   always @(posedge clk or negedge rst_n)
    begin
       if (~rst_n)
       begin

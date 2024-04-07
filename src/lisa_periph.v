@@ -96,7 +96,7 @@ module lisa_periph
    wire  [7:0]          porta_read;
    wire  [3:0]          portb_read;
 
-   always @(posedge clk)
+   always @(posedge clk or negedge rst_n)
    begin
       if (~rst_n)
       begin

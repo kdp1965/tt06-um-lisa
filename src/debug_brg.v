@@ -55,7 +55,7 @@ module debug_brg
    // ================================================
    // Clocked block to capture write data from CPU
    // ================================================
-   always @(posedge clk)
+   always @(posedge clk or negedge rst_n)
    begin
       if (~rst_n)
       begin
@@ -79,7 +79,7 @@ module debug_brg
    // ================================================
    // Generate 16x baud counter
    // ================================================
-   always @(posedge clk)
+   always @(posedge clk or negedge rst_n)
    begin
       if (~rst_n)
       begin

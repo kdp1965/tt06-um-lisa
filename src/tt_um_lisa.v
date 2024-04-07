@@ -90,6 +90,8 @@ module tt_um_lisa
    wire                 debug_tx;
    wire                 baud_ref;
 
+   reg  [1:0]           rst_n_r;
+
    // ==========================================================================
    // I/O mux control signals
    // ==========================================================================
@@ -248,12 +250,23 @@ module tt_um_lisa
    wire [1:0]           ce;
                              
    // ==========================================================================
+   // Synchronous release async reset
+   // ==========================================================================
+   always @(posedge clk or negedge rst_n)
+   begin
+      if (~rst_n)
+         rst_n_r <= 2'h0;
+      else
+         rst_n_r <= {rst_n_r[0], 1'b1};
+   end
+   
+   // ==========================================================================
    // Instantiate the Lisa Processor Core
    // ==========================================================================
    lisa_core i_lisa_core
    (
       .clk                 ( clk                ),
-      .rst_n               ( rst_n              ),
+      .rst_n               ( rst_n_r[1]         ),
       .reset               ( dbg_reset          ),
                                              
       // Instruction bus                     
@@ -318,7 +331,7 @@ module tt_um_lisa
    lisa_periph i_lisa_periph
    (
       .clk                 ( clk                ),
-      .rst_n               ( rst_n              ),
+      .rst_n               ( rst_n_r[1]         ),
                                                 
       // Data bus                               
       .d_i                 ( d_o                ),
@@ -351,7 +364,7 @@ module tt_um_lisa
    lisa_qspi_controller i_lisa_qspi_controller
    (
       .clk                 ( clk                ),
-      .rst_n               ( rst_n              ),
+      .rst_n               ( rst_n_r[1]         ),
 
       // Interface for debug
       .debug_addr          ( debug_addr         ), // 8Mx32
@@ -416,7 +429,7 @@ module tt_um_lisa
    lisa_qqspi i_lisa_qqspi
    (
       .clk                 ( clk                ),
-      .rst_n               ( rst_n              ),
+      .rst_n               ( rst_n_r[1]         ),
      
       // The control interface
       .addr                ( addr               ), // 8Mx32
@@ -457,7 +470,7 @@ module tt_um_lisa
    debug_ctrl i_debug_ctrl
    (
       .clk                 ( clk                ),
-      .rst_n               ( rst_n              ),
+      .rst_n               ( rst_n_r[1]         ),
                                                 
       // UART signals                           
       .debug_rx            ( debug_rx           ),
@@ -497,7 +510,7 @@ module tt_um_lisa
    (
       // Timing and reset inputs
       .clk                 ( clk                ), // System clock
-      .rst_n               ( rst_n              ), // Active low reset
+      .rst_n               ( rst_n_r[1]         ), // Active low reset
 
       // The Debug ctrl interface
       .dbg_a               ( dbg_a              ),
@@ -558,7 +571,7 @@ module tt_um_lisa
    (
       // Timing and reset inputs
       .clk                 ( clk                ), // System clock
-      .rst_n               ( rst_n              ), // Active low reset
+      .rst_n               ( rst_n_r[1]         ), // Active low reset
       .disabled            ( ui_in[7]           ), // Disabled if set externally
       .rx1                 ( ui_in[3]           ), // Input from the UART
       .rx2                 ( uio_in[6]          ), // Input from the UART
@@ -574,7 +587,7 @@ module tt_um_lisa
    lisa_io_mux i_lisa_io_mux
    (
       .clk                 ( clk                ),
-      .rst_n               ( rst_n              ),
+      .rst_n               ( rst_n_r[1]         ),
 
       // Chip top I/O signals
       .ui_in               ( ui_in              ),

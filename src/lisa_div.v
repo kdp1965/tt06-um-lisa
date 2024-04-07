@@ -139,9 +139,9 @@ module lisa_div
    assign div_ready = div_finish;
    assign a = abs_in_1;
 
-   always @(posedge clk)
+   always @(posedge clk or negedge rst_n)
    begin
-      if (!rst_n || reset)
+      if (~rst_n)
       begin
          state         <= s_idle;
          result        <= 'd0;
@@ -153,6 +153,17 @@ module lisa_div
       end
       else
       begin
+         if (reset)
+         begin
+            state         <= s_idle;
+            result        <= 'd0;
+            b             <= 'd0;
+            negate_output <= 'd0;
+            cond          <= 1'b0;
+            zflag_r       <= 1'b0;
+            cflag_r       <= 1'b0;
+         end
+         else
          case (state)
             s_idle : begin
                if (div_start) 

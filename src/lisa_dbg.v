@@ -118,7 +118,7 @@ module lisa_dbg
    assign dbg_halted = halted;
    assign dbg_ready = (d_active & !d_active_r) ? 1'b0 : d_access ? (delay == 2'h0) : d_active;
 
-   always @(posedge clk)
+   always @(posedge clk or negedge rst_n)
    begin
       if (~rst_n)
       begin

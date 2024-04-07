@@ -93,7 +93,7 @@ module debug_regs
    // ===================================================================
    // The Debug QSPI address register
    // ===================================================================
-   always @(posedge clk)
+   always @(posedge clk or negedge rst_n)
    begin
       if (~rst_n)
       begin

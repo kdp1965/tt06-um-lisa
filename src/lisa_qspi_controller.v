@@ -174,7 +174,7 @@ module lisa_qspi_controller
    Generate the flops
    =================================================================================
    */
-   always @(posedge clk)
+   always @(posedge clk or negedge rst_n)
    begin
       if (~rst_n)
       begin

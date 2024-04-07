@@ -302,7 +302,7 @@ module lisa_io_mux
    // ==============================================================
    // Generate logic for latching CE outputs for custom PMOD
    // ==============================================================
-   always @(posedge clk)
+   always @(posedge clk or negedge rst_n)
    begin
       if (~rst_n)
       begin

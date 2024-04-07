@@ -154,7 +154,7 @@ module lisa_qqspi
       .wr_buffer  (wr_buffer)
    );
 
-   always @(posedge clk) begin
+   always @(posedge clk or negedge rst_n) begin
       if (!rst_n) begin
          ce           <= ~0;
          sclk         <= 1'b0;

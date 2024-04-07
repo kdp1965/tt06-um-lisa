@@ -274,7 +274,7 @@ module debug_ctrl
    // ===================================================================
    // State machine update process
    // ===================================================================
-   always @(posedge clk)
+   always @(posedge clk or negedge rst_n)
    begin
       if (~rst_n)
       begin
@@ -637,7 +637,7 @@ module debug_ctrl
    // ===================================================================
    // Reset state counter
    // ===================================================================
-   always @(posedge clk)
+   always @(posedge clk or negedge rst_n)
    begin
       if (~rst_n)
          s_reset_count <= 0;
@@ -696,7 +696,7 @@ module debug_ctrl
    // ===================================================================
    // UART sharing guard timer
    // ===================================================================
-   always @(posedge clk)
+   always @(posedge clk or negedge rst_n)
    begin
       if (~rst_n)
       begin

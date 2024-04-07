@@ -52,10 +52,22 @@ async def test_lisa(dut):
 
     # Send a \n character
     await send_tx_byte(dut, 0x0a)
-    await send_tx_byte(dut, 0x0a)
 
+    await send_tx_byte(dut, 0x0a)
     retval = await read_rx_byte(dut)
-    print(f'retval = 0x{int(retval):02x}')
+    dut._log.info(f'retval = 0x{int(retval):02x}')
+
+    await send_tx_byte(dut, 0x0a)
+    retval = await read_rx_byte(dut)
+    dut._log.info(f'retval = 0x{int(retval):02x}')
+
+    await send_tx_byte(dut, 0x0a)
+    retval = await read_rx_byte(dut)
+    dut._log.info(f'retval = 0x{int(retval):02x}')
+
+    await send_tx_byte(dut, 0x0a)
+    retval = await read_rx_byte(dut)
+    dut._log.info(f'retval = 0x{int(retval):02x}')
 
     dut._log.info("all good!")
 

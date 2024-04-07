@@ -6,7 +6,7 @@ from cocotb.triggers import ClockCycles
 # Write a byte to the UART
 # ==================================================
 async def send_tx_byte(dut, data):
-   int   count = 0
+   count = 0
 
    # Wait for the UART TX to be ready 
    while not dut.tx_buf_empty.value and count < 200000:
@@ -28,7 +28,7 @@ async def send_tx_byte(dut, data):
 # Read a byte from the UART
 # ==================================================
 async def read_rx_byte(dut):
-   int   count = 0
+   count = 0
 
    # Wait for the UART TX to be ready 
    while not dut.rx_avail.value and count < 200000:

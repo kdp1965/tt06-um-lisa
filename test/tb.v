@@ -13,7 +13,7 @@ module tb
    input          rst_n,
    input          ena,
    input [7:0]    tx_d,
-   input          tx_wr
+   input          tx_wr,
    output         tx_buf_empty,
    input          rx_rd,
    output [7:0]   rx_d,
@@ -135,8 +135,8 @@ module tb
    // Assign the port I/O
    // ==========================================================================
    assign porta_out = uo_out;
-   assign ui_in[2:0] = porta_in[2:0]
-   assign ui_in[7:4] = porta_in[7:4]
+   assign ui_in[2:0] = porta_in[2:0];
+   assign ui_in[7:4] = porta_in[7:4];
    
    // ==========================================================================
    // Instantiate a SPI flash

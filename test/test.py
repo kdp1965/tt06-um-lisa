@@ -14,6 +14,19 @@ async def send_tx_byte(dut, data):
    dut.tx_wr.value = 0
    await ClockCycles(dut.clk, 2)
 
+async def read_rx_byte(dut):
+   # Wait for the UART TX to be ready 
+   await int(dut.rx_avail.value) == 1
+
+   # Perform a read
+   retval = dut.rx_d.value
+   dut.rx_rd.value = 1
+   await ClockCycles(dut.clk, 1)
+
+   dut.rx_rd.value = 0
+   await ClockCycles(dut.clk, 1)
+   return retval
+
 @cocotb.test()
 async def test_lisa(dut):
     dut._log.info("start")
@@ -39,4 +52,8 @@ async def test_lisa(dut):
     await send_tx_byte(dut, 0x0a)
     await send_tx_byte(dut, 0x0a)
 
+    retval = await read_rx_byte(dut)
+    assert int(retval) == 0x0a
+
     dut._log.info("all good!")
+

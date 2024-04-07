@@ -17,7 +17,8 @@ async def send_tx_byte(dut, data):
 
 async def read_rx_byte(dut):
    # Wait for the UART TX to be ready 
-   await int(dut.rx_avail.value) == 1
+   while not dut.rx_avail.value:
+      await ClockCycles(dut.clk, 1)
 
    # Perform a read
    retval = dut.rx_d.value

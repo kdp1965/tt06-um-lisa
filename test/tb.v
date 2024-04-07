@@ -30,6 +30,7 @@ module tb
    wire     [7:0] uio_in;
 
    wire           ce0;
+   wire           ce1;
    wire           sclk;
    wire           dq0;
    wire           dq1;
@@ -160,10 +161,11 @@ module tb
    // ==========================================================================
    psram psram_I
    (
-      .ce_n ( ce[1]                ),
+      .ce_n ( ce1                  ),
       .sck  ( sclk                 ),
       .dio  ( {dq3, dq2, dq1, dq0} )
    );
+   assign ce1 = 1'b1;
 
 endmodule
 

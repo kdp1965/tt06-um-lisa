@@ -130,7 +130,7 @@ module tb
       .baud_ref   ( baud_ref     )
    );
    assign baud_set = 1'b1;
-   assign baud_div = 7'h3;
+   assign baud_div = 7'd20;
 
    // ==========================================================================
    // Assign the port I/O

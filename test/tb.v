@@ -66,7 +66,7 @@ module tb
    // ==========================================================================
    // Connect the QSPI signals to the SPI flash
    // ==========================================================================
-   assign cs0  = uio_out[0];
+   assign ce0  = uio_out[0];
    assign sclk = uio_out[3];
    assign dq0  = uio_oe[1] ? uio_out[1] : 1'bz;
    assign dq1  = uio_oe[2] ? uio_out[2] : 1'bz;

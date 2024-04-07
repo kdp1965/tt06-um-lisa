@@ -106,7 +106,7 @@ module tb
       .buf_empty  ( tx_buf_empty )
    );
 
-   lisa_rx_8n i_rx8n
+   lisa_rx8n i_rx8n
    (
       .clk        ( clk          ),
       .rst_n      ( rst_n        ),

@@ -4,7 +4,8 @@ from cocotb.triggers import ClockCycles
 
 async def send_tx_byte(dut, data):
    # Wait for the UART TX to be ready 
-   await int(dut.tx_buf_empty.value) == 1
+   while not dut.tx_buf_empty.value:
+      await ClockCycles(dut.clk, 1)
 
    # Configure the write
    dut.tx_d.value = data

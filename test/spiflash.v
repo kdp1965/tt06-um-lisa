@@ -107,14 +107,14 @@ module spiflash #(
   reg [7:0] memory[0:16*1024*1024-1];
 
   initial begin
-    $display("Memory 5 bytes = 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x", memory[1048576],
-             memory[1048577], memory[1048578],  // 0x100000
-             memory[1048579], memory[1048580]);
+    $display("Memory 5 bytes = 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x", memory[0],
+             memory[1], memory[2],  // 0x100000
+             memory[3], memory[4]);
     $display("Reading %s", FILENAME);
     $readmemh(FILENAME, memory);
     $display("%s loaded into memory", FILENAME);
-    $display("Memory 5 bytes = 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x", memory[1048576],
-             memory[1048577], memory[1048578], memory[1048579], memory[1048580]);
+    $display("Memory 5 bytes = 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x", memory[0],
+             memory[1], memory[2], memory[3], memory[4]);
   end
 
   task spi_action;

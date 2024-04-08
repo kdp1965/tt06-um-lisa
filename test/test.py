@@ -87,5 +87,9 @@ async def test_lisa(dut):
     retval = await read_rx_byte(dut)
     dut._log.info(f'retval = 0x{int(retval):02x}')
 
+    # Read the CR
+    retval = await read_rx_byte(dut)
+    dut._log.info(f'retval = 0x{int(retval):02x}')
+
     dut._log.info("all good!")
 

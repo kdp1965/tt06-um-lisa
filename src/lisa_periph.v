@@ -96,11 +96,14 @@ module lisa_periph
    wire  [7:0]          porta_read;
    wire  [3:0]          portb_read;
 
-   always @(posedge clk or negedge rst_n)
+   always @(posedge clk)
    begin
       if (~rst_n)
       begin
-         porta       <= 8'h07;
+         porta       <= 8'h00;
+         porta_dir   <= 8'h00;
+         portb       <= 4'h00;
+         portb_dir   <= 4'h0;
          ms_prediv   <= 16'd29494;
          ms_count    <= 16'h0;
          ms_timer    <= 16'h0;

@@ -181,8 +181,6 @@ module debug_ctrl
    wire           s_tx_buf_empty;   // TX buffer empty
 
    // Lisa Debug interface signals
-   reg    [3:0]   s_debug_a;
-   reg    [15:0]  s_debug_dout;
    wire   [15:0]  s_debug_din;
    reg            s_debug_wr;
    reg            s_debug_rd;
@@ -278,14 +276,18 @@ module debug_ctrl
    begin
       if (~rst_n)
       begin
-         s_state           <= st_reset;
-         s_rx_rd           <= 1'b0;
-         s_tx_wr           <= 1'b0;
-         s_debug_arg       <= 24'h0;
-         s_debug_wr        <= 1'b0;
-         s_debug_rd        <= 1'b0;
-         s_debug_reset     <= 1'b0;
-         s_lisa_uart_grant <= 1'b0;
+         s_state             <= st_reset;
+         s_rx_rd             <= 1'b0;
+         s_tx_wr             <= 1'b0;
+         s_debug_arg         <= 24'h0;
+         s_debug_wr          <= 1'b0;
+         s_debug_rd          <= 1'b0;
+         s_debug_reset       <= 1'b0;
+         s_lisa_uart_grant   <= 1'b0;
+         s_lisa_rx_avail     <= 1'b0;
+         s_last_debug_halted <= 1'b0;
+         s_tx_d              <= 8'h0;
+         s_t_len             <= 8'h0;
       end
       else
       begin

@@ -71,7 +71,7 @@ module lisa_tx8n
    // ================================================
    // Clocked block to generate clock count
    // ================================================
-   always @(posedge clk or negedge rst_n)
+   always @(posedge clk)
    begin
       if (~rst_n)
       begin
@@ -98,7 +98,7 @@ module lisa_tx8n
    // ================================================
    // Generate TX buffer logic
    // ================================================
-   always @(posedge clk or negedge rst_n)
+   always @(posedge clk)
    begin
       if (~rst_n)
       begin
@@ -123,7 +123,7 @@ module lisa_tx8n
    // ================================================
    // Decode the registers
    // ================================================
-   always @(posedge clk or negedge rst_n)
+   always @(posedge clk)
    begin
       if (~rst_n)
       begin

@@ -67,7 +67,7 @@ module lisa_rx8n
    // ================================================
    // Detect a read data condition
    // ================================================
-   always @(posedge clk or negedge rst_n)
+   always @(posedge clk)
    begin
       if (~rst_n)
       begin
@@ -87,7 +87,7 @@ module lisa_rx8n
    // ================================================
    // RX data state machine
    // ================================================
-   always @(posedge clk or negedge rst_n)
+   always @(posedge clk)
    begin
       if (~rst_n)
       begin

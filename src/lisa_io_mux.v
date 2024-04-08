@@ -230,7 +230,7 @@ module lisa_io_mux
    begin
       s_uio_out[0] = custom_pmod ? ce_latch : ce[0];
       s_uio_out[1] = ce_data ? ce[0] : sio0_si_mosi_o;
-      s_uio_out[2] = ce_data ? ce[0] : sio1_so_miso_o;
+      s_uio_out[2] = ce_data ? ce[1] : sio1_so_miso_o;
       s_uio_out[3] = sclk;
 
       // UIO bit 4
@@ -302,7 +302,7 @@ module lisa_io_mux
    // ==============================================================
    // Generate logic for latching CE outputs for custom PMOD
    // ==============================================================
-   always @(posedge clk or negedge rst_n)
+   always @(posedge clk)
    begin
       if (~rst_n)
       begin

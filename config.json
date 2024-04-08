@@ -45,8 +45,8 @@
   },
 
   "FP_SIZING": "absolute",
-  "DIE_AREA": [0, 0, 682.64, 225.76],
-  "FP_DEF_TEMPLATE": "dir::tt/def/tt_block_4x2_pg.def",
+  "DIE_AREA": [0, 0, 1030.40, 225.76],
+  "FP_DEF_TEMPLATE": "dir::tt/def/tt_block_6x2_pg.def",
 
   "//": "use alternative efabless decap cells to solve LI density issue",
   "DECAP_CELL": [
@@ -66,7 +66,7 @@
   "RT_MAX_LAYER": "met4",
 
   "ROUTING_CORES": 8,
-  "PL_TARGET_DENSITY_PCT": 75,
+  "PL_TARGET_DENSITY_PCT": 65,
 
   "//": "reduce wasted space",
   "TOP_MARGIN_MULT": 1,

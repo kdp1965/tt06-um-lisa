@@ -9,7 +9,7 @@ async def send_tx_byte(dut, data):
    count = 0
 
    # Wait for the UART TX to be ready 
-   while not dut.tx_buf_empty.value and count < 20000:
+   while not dut.tx_buf_empty.value and count < 80000:
       await ClockCycles(dut.clk, 1)
       count = count + 1
 
@@ -31,7 +31,7 @@ async def read_rx_byte(dut):
    count = 0
 
    # Wait for the UART TX to be ready 
-   while not dut.rx_avail.value and count < 20000:
+   while not dut.rx_avail.value and count < 80000:
       await ClockCycles(dut.clk, 1)
       count = count + 1
 

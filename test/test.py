@@ -9,12 +9,12 @@ async def send_tx_byte(dut, data):
    count = 0
 
    # Wait for the UART TX to be ready 
-   while not dut.tx_buf_empty.value and count < 200000:
+   while not dut.tx_buf_empty.value and count < 20000:
       await ClockCycles(dut.clk, 1)
       count = count + 1
 
    # Test for timeout
-   assert count != 200000
+   assert count != 20000
 
    # Configure the write
    dut.tx_d.value = data
@@ -31,12 +31,12 @@ async def read_rx_byte(dut):
    count = 0
 
    # Wait for the UART TX to be ready 
-   while not dut.rx_avail.value and count < 200000:
+   while not dut.rx_avail.value and count < 20000:
       await ClockCycles(dut.clk, 1)
       count = count + 1
 
    # Test for timeout
-   assert count != 200000
+   assert count != 20000
 
    # Perform a read
    retval = dut.rx_d.value

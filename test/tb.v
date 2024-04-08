@@ -78,10 +78,17 @@ module tb
    assign dq1  = uio_oe[2] ? uio_out[2] : 1'bz;
    assign dq2  = uio_oe[6] ? uio_out[6] : 1'bz;
    assign dq3  = uio_oe[7] ? uio_out[7] : 1'bz;
+   assign uio_in[0] = 1'b0;
    assign uio_in[1] = dq0;
    assign uio_in[2] = dq1;
+   assign uio_in[5:3] = 3'b0;
    assign uio_in[6] = uart_port_sel == 2'h2 ? txd : dq2;
    assign uio_in[7] = dq3;
+
+   pullup (dq1);
+   pullup (dq2);
+   pullup (dq3);
+   pullup (dq4);
 
    // ==========================================================================
    // Connect the UART to the port specified

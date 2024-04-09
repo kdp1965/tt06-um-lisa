@@ -7,6 +7,7 @@
                     "src/lisa_rx8n.v",      "src/lisa_tx8n.v",
                     "src/debug_ctrl.v",     "src/debug_autobaud.v",
                     "src/debug_brg.v",      "src/debug_regs.v"],
+                    "src/data_cache.v"],
   "EXTRA_VERILOG_MODELS": ["src/RAM32.v"],
 
   "FP_PDN_CHECK_NODES": false,

@@ -30,6 +30,7 @@ project:
     - "debug_autobaud.v"
     - "debug_brg.v"
     - "debug_regs.v"
+    - "data_cache.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:

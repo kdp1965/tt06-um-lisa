@@ -119,8 +119,15 @@ module tt_um_lisa
    wire                 d_we;
    wire                 d_rd;
    wire                 d_periph;
+   wire                 d_valid;
+   wire                 d_ready;
    wire   [31:0]        ram_do;
+   wire   [31:0]        ram_di;
    wire   [3:0]         ram_we;
+   wire   [4:0]         ram_a;
+   wire                 ram_en;
+   wire                 cache_disabled;
+   wire   [1:0]         cache_map_sel;
 
    // ==========================================================================
    // Debug signals
@@ -175,6 +182,7 @@ module tt_um_lisa
    wire [15:0]          debug_wdata;         // Data to write
    wire [1:0]           debug_wstrb;         // Which bytes in the 32-bits to write
    wire                 debug_ready;         // Next 32-bit value is ready
+   wire                 debug_ready_ack;     // Next 32-bit value is ready
    wire                 debug_xfer_done;     // Total xfer_len transfer is done
    wire                 debug_valid;         // Indicates a valid request 
    wire [3:0]           debug_xfer_len;      // Number of 32-bit words to transfer
@@ -193,6 +201,7 @@ module tt_um_lisa
    wire [15:0]          lisa1_wdata;         // Data to write
    wire [1:0]           lisa1_wstrb;         // Which bytes in the 32-bits to write
    wire                 lisa1_ready;         // Next 32-bit value is ready
+   wire                 lisa1_ready_ack;     // Next 32-bit value is ready
    wire                 lisa1_xfer_done;     // Total xfer_len transfer is done
    wire                 lisa1_valid;         // Indicates a valid request 
    wire [3:0]           lisa1_xfer_len;      // Number of 32-bit words to transfer
@@ -207,6 +216,7 @@ module tt_um_lisa
    wire [15:0]          lisa2_wdata;         // Data to write
    wire [1:0]           lisa2_wstrb;         // Which bytes in the 32-bits to write
    wire                 lisa2_ready;         // Next 32-bit value is ready
+   wire                 lisa2_ready_ack;     // Next 32-bit value is ready
    wire                 lisa2_xfer_done;     // Total xfer_len transfer is done
    wire                 lisa2_valid;         // Indicates a valid request 
    wire [3:0]           lisa2_xfer_len;      // Number of 32-bit words to transfer
@@ -221,6 +231,7 @@ module tt_um_lisa
    wire [15:0]          wdata;               // Data to write
    wire [1:0]           wstrb;               // Which bytes in the 32-bits to write
    wire                 ready;               // Next 32-bit value is ready
+   wire                 ready_ack;           // Next 32-bit write value is ready
    wire                 xfer_done;           // Total xfer_len transfer is done
    wire                 valid;               // Indicates a valid request 
    wire [3:0]           xfer_len;            // Number of 32-bit words to transfer
@@ -284,6 +295,8 @@ module tt_um_lisa
       .d_periph            ( d_periph           ),
       .d_we                ( d_we               ),
       .d_rd                ( d_rd               ),
+      .d_valid             ( d_valid            ),
+      .d_ready             ( d_ready            ),
                                                 
       // Debug bus                              
       .dbg_a               ( dbg_a              ),
@@ -293,6 +306,47 @@ module tt_um_lisa
       .dbg_rd              ( dbg_rd             ),
       .dbg_ready           ( dbg_ready_lisa     ),
       .dbg_halted          ( dbg_halted         )
+   );
+
+   // ==========================================================================
+   // Instantiate the DATA CACHE controller
+   // ==========================================================================
+   data_cache i_data_cache
+   (
+      .clk                 ( clk                  ),
+      .rst_n               ( rst_n_r[2]           ),
+      .disabled            ( cache_disabled       ),
+
+      // The data bus connection to LISA core
+      .d_addr              ( d_addr               ),
+      .d_i                 ( d_i                  ),
+      .d_o                 ( d_o                  ),
+      .d_valid             ( d_valid              ),
+      .d_we                ( d_we                 ),
+      .d_rd                ( d_rd                 ),
+      .d_periph            ( d_periph             ),
+      .d_ready             ( d_ready              ),
+
+      // Interface to the RAM32 macro
+      .ram_we              ( ram_we               ),
+      .ram_en              ( ram_en               ),
+      .ram_a               ( ram_a                ),
+      .ram_di              ( ram_do               ),
+      .ram_do              ( ram_di               ),
+      
+      // Selects the upper bit for CACHE line mapping
+      .cache_map_sel       ( cache_map_sel        ), 
+
+      // Interface to the QSPI controller
+      .qspi_addr           ( lisa2_addr[15:0]     ),
+      .qspi_rdata          ( lisa2_rdata          ),
+      .qspi_wdata          ( lisa2_wdata          ),
+      .qspi_wstrb          ( lisa2_wstrb          ),
+      .qspi_ready          ( lisa2_ready          ),
+      .qspi_ready_ack      ( lisa2_ready_ack      ),
+      .qspi_xfer_done      ( lisa2_xfer_done      ),
+      .qspi_valid          ( lisa2_valid          ),
+      .qspi_xfer_len       ( lisa2_xfer_len       )
    );
 
    // ==========================================================================
@@ -306,24 +360,25 @@ module tt_um_lisa
 `endif
       .CLK                 ( clk                  ),
       .WE0                 ( ram_we               ),
-      .EN0                 ( 1'b1                 ),
-      .A0                  ( d_addr[6:2]          ),
-      .Di0                 ( {d_o, d_o, d_o, d_o} ),
+      .EN0                 ( ram_en               ),
+//      .A0                  ( d_addr[6:2]          ),
+      .A0                  ( ram_a                ),
+      .Di0                 ( ram_di               ),
       .Do0                 ( ram_do               )
    );
 
    // ==========================================================================
    // Connect the RAM32 write enable and output signals
    // ==========================================================================
-   assign ram_we[0] = d_we & ~d_periph & (d_addr[1:0] == 2'h0);
-   assign ram_we[1] = d_we & ~d_periph & (d_addr[1:0] == 2'h1);
-   assign ram_we[2] = d_we & ~d_periph & (d_addr[1:0] == 2'h2);
-   assign ram_we[3] = d_we & ~d_periph & (d_addr[1:0] == 2'h3);
-   assign d_i_dram = ({8{d_addr[1:0] == 2'h0}} & ram_do[7:0])   |
-                     ({8{d_addr[1:0] == 2'h1}} & ram_do[15:8])  |
-                     ({8{d_addr[1:0] == 2'h2}} & ram_do[23:16]) |
-                     ({8{d_addr[1:0] == 2'h3}} & ram_do[31:24]);
-   assign d_i = d_periph ? d_i_periph : d_i_dram;
+//   assign ram_we[0] = d_we & ~d_periph & (d_addr[1:0] == 2'h0);
+//   assign ram_we[1] = d_we & ~d_periph & (d_addr[1:0] == 2'h1);
+//   assign ram_we[2] = d_we & ~d_periph & (d_addr[1:0] == 2'h2);
+//   assign ram_we[3] = d_we & ~d_periph & (d_addr[1:0] == 2'h3);
+//   assign d_i_dram = ({8{d_addr[1:0] == 2'h0}} & ram_do[7:0])   |
+//                     ({8{d_addr[1:0] == 2'h1}} & ram_do[15:8])  |
+//                     ({8{d_addr[1:0] == 2'h2}} & ram_do[23:16]) |
+//                     ({8{d_addr[1:0] == 2'h3}} & ram_do[31:24]);
+//   assign d_i = d_periph ? d_i_periph : d_i_dram;
 
    // ==========================================================================
    // Instantiate a peripheral controller
@@ -372,6 +427,7 @@ module tt_um_lisa
       .debug_wdata         ( debug_wdata        ), // Data to write
       .debug_wstrb         ( debug_wstrb        ), // Which bytes in the 32-bits to write
       .debug_ready         ( debug_ready        ), // Next 32-bit value is ready
+      .debug_ready_ack     ( debug_ready_ack    ), // Indicates a valid request
       .debug_xfer_done     ( debug_xfer_done    ), // Total xfer_len transfer is done
       .debug_valid         ( debug_valid        ), // Indicates a valid request
       .debug_xfer_len      ( debug_xfer_len     ), // Number of 32-bit words to transfer
@@ -385,6 +441,7 @@ module tt_um_lisa
       .lisa1_wdata         ( lisa1_wdata        ), // Data to write
       .lisa1_wstrb         ( lisa1_wstrb        ), // Which bytes in the 32-bits to write
       .lisa1_ready         ( lisa1_ready        ), // Next 32-bit value is ready
+      .lisa1_ready_ack     ( lisa1_ready_ack    ), // Next 32-bit value is ready
       .lisa1_xfer_done     ( lisa1_xfer_done    ), // Total xfer_len transfer is done
       .lisa1_valid         ( lisa1_valid        ), // Indicates a valid request
       .lisa1_xfer_len      ( lisa1_xfer_len     ), // Number of 32-bit words to transfer
@@ -396,6 +453,7 @@ module tt_um_lisa
       .lisa2_wdata         ( lisa2_wdata        ), // Data to write
       .lisa2_wstrb         ( lisa2_wstrb        ), // Which bytes in the 32-bits to write
       .lisa2_ready         ( lisa2_ready        ), // Next 32-bit value is ready
+      .lisa2_ready_ack     ( lisa2_ready_ack    ), // Next 32-bit value is ready
       .lisa2_xfer_done     ( lisa2_xfer_done    ), // Total xfer_len transfer is done
       .lisa2_valid         ( lisa2_valid        ), // Indicates a valid request
       .lisa2_xfer_len      ( lisa2_xfer_len     ), // Number of 32-bit words to transfer
@@ -407,6 +465,7 @@ module tt_um_lisa
       .wdata               ( wdata              ), // Data to write
       .wstrb               ( wstrb              ), // Which bytes in the 32-bits to write
       .ready               ( ready              ), // Next 32-bit value is ready
+      .ready_ack           ( ready_ack          ), // Next 32-bit value is ready
       .xfer_done           ( xfer_done          ), // Total xfer_len transfer is done
       .valid               ( valid              ), // Indicates a valid request
       .xfer_len            ( xfer_len           ), // Number of 32-bit words to transfer
@@ -417,11 +476,12 @@ module tt_um_lisa
 
    // TODO: Add cache controller for DATA bus
    // For now Lisa data is only 128 Bytes ... no external
-   assign lisa2_valid = 1'b0;
-   assign lisa2_addr  = 'h0;
-   assign lisa2_wdata = 'h0;
-   assign lisa2_wstrb = 'h0;
-   assign lisa2_xfer_len = 'h0;
+//   assign lisa2_valid = 1'b0;
+//   assign lisa2_addr  = 'h0;
+//   assign lisa2_wdata = 'h0;
+//   assign lisa2_wstrb = 'h0;
+//   assign lisa2_xfer_len = 'h0;
+   assign lisa2_ready_ack = 1'b1;
 
    // ==========================================================================
    // Instantiate the QQSPI controller
@@ -437,6 +497,7 @@ module tt_um_lisa
       .wdata               ( wdata              ), // Data to write
       .wstrb               ( wstrb              ), // Which bytes in the 32-bits to write
       .ready               ( ready              ), // Next 32-bit value is ready
+      .ready_ack           ( ready_ack          ), // Next 32-bit value is ready
       .xfer_done           ( xfer_done          ), // Total xfer_len transfer is done
       .valid               ( valid              ), // Indicates a valid request
       .xfer_len            ( xfer_len           ), // Number of 32-bit words to transfer
@@ -549,7 +610,11 @@ module tt_um_lisa
 
       // I/O Mux Bits
       .output_mux_bits     ( output_mux_bits    ),
-      .io_mux_bits         ( io_mux_bits        )
+      .io_mux_bits         ( io_mux_bits        ),
+
+      // Cache control
+      .cache_disabled      ( cache_disabled     ),
+      .cache_map_sel       ( cache_map_sel      )
    );
 
    assign dbg_do         = dbg_do_lisa | dbg_do_regs;
@@ -558,11 +623,13 @@ module tt_um_lisa
    assign lisa1_valid    = core_i_fetch | core_inst_we;
    assign lisa1_wstrb    = {core_inst_we, core_inst_we};
    assign lisa1_wdata    = core_inst_o;
-   assign lisa1_xfer_len = 4'h1;
+   assign lisa1_xfer_len = 4'h0;             // Zero means 1 16-bit transfer
+   assign lisa1_ready_ack= 1'b1;             // Always ready
    assign core_inst      = lisa1_rdata;
    assign core_i_ready   = lisa1_ready;
    assign baud_div       = ui_in[6:0];
    assign baud_set       = ui_in[7];
+   assign debug_ready_ack= 1'b1;
 
    // ==========================================================================
    // Instantiate the debug controller

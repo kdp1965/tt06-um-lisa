@@ -42,6 +42,7 @@ module lisa_qspi_controller
    input  wire [15:0]   debug_wdata,         // Data to write
    input  wire [1:0]    debug_wstrb,         // Which bytes in the 32-bits to write
    output wire          debug_ready,         // Next 32-bit value is ready
+   input  wire          debug_ready_ack,     // Next 32-bit value is ready
    output wire          debug_xfer_done,     // Total xfer_len transfer is done
    input  wire          debug_valid,         // Indicates a valid request 
    input  wire [3:0]    debug_xfer_len,      // Number of 16-bit words to transfer
@@ -55,6 +56,7 @@ module lisa_qspi_controller
    input  wire [15:0]   lisa1_wdata,         // Data to write
    input  wire [1:0]    lisa1_wstrb,         // Which bytes in the 32-bits to write
    output wire          lisa1_ready,         // Next 32-bit value is ready
+   input  wire          lisa1_ready_ack,     // Next 32-bit value is ready
    output wire          lisa1_xfer_done,     // Total xfer_len transfer is done
    input  wire          lisa1_valid,         // Indicates a valid request 
    input  wire [3:0]    lisa1_xfer_len,      // Number of 32-bit words to transfer
@@ -64,6 +66,7 @@ module lisa_qspi_controller
    input  wire [15:0]   lisa2_wdata,         // Data to write
    input  wire [1:0]    lisa2_wstrb,         // Which bytes in the 32-bits to write
    output wire          lisa2_ready,         // Next 32-bit value is ready
+   input  wire          lisa2_ready_ack,     // Next 32-bit value is ready
    output wire          lisa2_xfer_done,     // Total xfer_len transfer is done
    input  wire          lisa2_valid,         // Indicates a valid request 
    input  wire [3:0]    lisa2_xfer_len,      // Number of 16-bit words to transfer
@@ -75,6 +78,7 @@ module lisa_qspi_controller
    output wire [15:0]   wdata,               // Data to write
    output wire [1:0]    wstrb,               // Which bytes in the 32-bits to write
    input  wire          ready,               // Next 32-bit value is ready
+   output wire          ready_ack,           // Next 32-bit value is ready
    input  wire          xfer_done,           // Total xfer_len transfer is done
    output wire          valid,               // Indicates a valid request 
    output wire [3:0]    xfer_len,            // Number of 16-bit words to transfer
@@ -100,6 +104,7 @@ module lisa_qspi_controller
    wire                    c_ready[N_CLIENTS-1:0];       // Next 32-bit value is ready
    wire                    c_xfer_done[N_CLIENTS-1:0];   // Total xfer_len transfer is done
    wire [N_CLIENTS-1:0]    c_valid;                      // Indicates a valid request 
+   wire [N_CLIENTS-1:0]    c_ready_ack;                  // Indicates a valid request 
    wire [3:0]              c_xfer_len[N_CLIENTS-1:0];    // Number of 16-bit words to transfer
    wire [CHIP_SELECTS-1:0] c_ce_ctrl[N_CLIENTS-1:0];
 
@@ -112,6 +117,7 @@ module lisa_qspi_controller
    assign c_wdata[0]          = debug_wdata;
    assign c_wstrb[0]          = debug_wstrb;
    assign c_valid[0]          = debug_valid;
+   assign c_ready_ack[0]      = debug_ready_ack;
    assign c_xfer_len[0]       = debug_xfer_len;
    assign c_ce_ctrl[0]        = debug_ce_ctrl;
    assign debug_rdata         = c_rdata[0];
@@ -124,6 +130,7 @@ module lisa_qspi_controller
    assign c_wdata[1]          = lisa1_wdata;
    assign c_wstrb[1]          = lisa1_wstrb;
    assign c_valid[1]          = lisa1_valid;
+   assign c_ready_ack[1]      = lisa1_ready_ack;
    assign c_xfer_len[1]       = lisa1_xfer_len;
    assign c_ce_ctrl[1]        = lisa1_ce_ctrl;
    assign lisa1_rdata         = c_rdata[1];
@@ -134,6 +141,7 @@ module lisa_qspi_controller
    assign c_wdata[2]          = lisa2_wdata;
    assign c_wstrb[2]          = lisa2_wstrb;
    assign c_valid[2]          = lisa2_valid;
+   assign c_ready_ack[2]      = lisa2_ready_ack;
    assign c_xfer_len[2]       = lisa2_xfer_len;
    assign c_ce_ctrl[2]        = lisa2_ce_ctrl;
    assign lisa2_rdata         = c_rdata[2];
@@ -153,6 +161,7 @@ module lisa_qspi_controller
    assign valid      = c_valid[arb_sel] & valid_gate;
    assign xfer_len   = c_xfer_len[arb_sel];
    assign ce_ctrl    = c_ce_ctrl[arb_sel];
+   assign ready_ack  = c_ready_ack[arb_sel];
 
    /* 
    =================================================================================

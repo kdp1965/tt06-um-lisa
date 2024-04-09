@@ -285,7 +285,7 @@ module debug_ctrl
          s_debug_reset       <= 1'b0;
          s_lisa_uart_grant   <= 1'b0;
          s_lisa_rx_avail     <= 1'b0;
-         s_last_debug_halted <= 1'b0;
+         s_last_debug_halted <= 1'b1;
          s_tx_d              <= 8'h0;
          s_t_len             <= 8'h0;
       end

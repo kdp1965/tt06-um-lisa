@@ -165,6 +165,8 @@ module lisa_core
    output wire                d_periph,
    output wire                d_we,
    output wire                d_rd,
+   output wire                d_valid,
+   input  wire                d_ready,
 
    input  wire [7:0]          dbg_a,
    input  wire [15:0]         dbg_di,
@@ -441,6 +443,8 @@ module lisa_core
       end
    end
 
+   // TODO:  add read conditions to d_valid
+   assign d_valid = d_we & ~d_periph;
    assign d_we   = dbg_d_access ? dbg_d_we : (stop && dbg_a == 8'h6) ? dbg_we : d_we_r;
    assign d_periph = ((op_sta | op_lda | op_swapi) & inst[9] & !dbg_d_access) | dbg_d_periph;
    assign d_rd   = dbg_d_access ? dbg_d_rd : d_periph & cond[0] & exec_state;
@@ -679,24 +683,27 @@ module lisa_core
          // Execute and Increment PC
          2'h2:
             begin
-               // Test for 2-stage operations
-               if (cond[0] && (op_sra | op_lra | op_push_ix | op_pop_ix | op_stxx | op_ldxx |
-                        op_any_div))
+               if (d_ready | !d_valid)
                begin
-                  // Go to state 3
-                  state <= 2'h3;
-               end
-               else
-               begin
-                  // Just increment the PC
-                  pc <= pc_inc;
-                  state <= 2'h0;
-               end
+                  // Test for 2-stage operations
+                  if (cond[0] && (op_sra | op_lra | op_push_ix | op_pop_ix | op_stxx | op_ldxx |
+                           op_any_div))
+                  begin
+                     // Go to state 3
+                     state <= 2'h3;
+                  end
+                  else
+                  begin
+                     // Just increment the PC
+                     pc <= pc_inc;
+                     state <= 2'h0;
+                  end
 
-               // Test for stax ix+imm8 operation or swap a,[ix+imm8]
-               if (cond[0] && (op_st || op_swap || op_swapi || op_sra || op_push_a ||
-                        op_dcx || op_inx || op_push_ix || op_stxx || op_shl16 | op_shr16))
-                  d_we_r <= 1'b1;
+                  // Test for stax ix+imm8 operation or swap a,[ix+imm8]
+                  if (cond[0] && (op_st || op_swap || op_swapi || op_sra || op_push_a ||
+                           op_dcx || op_inx || op_push_ix || op_stxx || op_shl16 | op_shr16))
+                     d_we_r <= 1'b1;
+               end
             end
 
          // Process 2-stage opcode

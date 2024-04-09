@@ -37,6 +37,7 @@ module lisa_qqspi
    input  wire [15:0]               wdata,      // Data to write
    input  wire [1:0]                wstrb,      // Which bytes in the 32-bits to write
    output reg                       ready,      // Next 32-bit value is ready
+   input  wire                      ready_ack,  // ACK that next wdata is ready
    output reg                       xfer_done,  // Total xfer_len transfer is done
    input  wire                      valid,      // Indicates a valid request 
    input  wire [3:0]                xfer_len,   // Number of 32-bit words to transfer
@@ -231,7 +232,7 @@ module lisa_qqspi
             S1_SELECT_DEVICE: begin
                ce_next        = ~ce_ctrl;
                next_state     = S2_CMD;
-               len_count_next = {1'b0, xfer_len - 4'h1};
+               len_count_next = {1'b0, xfer_len};
             end
           
             S8_SELECT_WREN: begin
@@ -299,7 +300,10 @@ module lisa_qqspi
                   next_state     = S0_IDLE;
                   xfer_done_next = 1'b1;
                end
-               else
+
+               // Wait for ready_ack to ensure new data
+               // is available
+               else if (ready_ack || !write)
                begin
                   next_state     = S6_XFER;
                   len_count_next = len_count - 4'h1;

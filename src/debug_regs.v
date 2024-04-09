@@ -71,7 +71,10 @@ module debug_regs
    output reg  [3:0]          plus_guard_time,
 
    output reg  [15:0]         output_mux_bits,
-   output reg  [7:0]          io_mux_bits
+   output reg  [7:0]          io_mux_bits,
+
+   output reg                 cache_disabled,
+   output reg  [1:0]          cache_map_sel
 );
 
    wire        debug_qspi_write;
@@ -83,7 +86,7 @@ module debug_regs
    assign debug_qspi_read  = (dbg_a == 8'h20 || dbg_a == 8'h21 || dbg_a == 8'h22) && dbg_rd;
    assign custom_spi_cmd   = dbg_a == 8'h21 || dbg_a == 8'h22;
    assign cmd_quad_write   = dbg_a == 8'h22 ? 8'h05 : cmd_quad_write_r;
-   assign debug_xfer_len = 4'h1;
+   assign debug_xfer_len = 4'h0;    // Zero means 1 16-bit transfer
    assign dbg_ready      = debug_ready || (dbg_a[7:4] != 4'h2 && dbg_a[7:4] != 4'h0 &&
                               (dbg_rd | dbg_we));
    assign debug_valid    = (debug_qspi_write | debug_qspi_read) && !debug_ready;
@@ -111,6 +114,8 @@ module debug_regs
          plus_guard_time   <= 4'h1;
          output_mux_bits   <= 16'h0;
          io_mux_bits       <= 8'h0;
+         cache_disabled    <= 1'b0;
+         cache_map_sel     <= 2'h3;
       end
       else
       begin
@@ -130,6 +135,7 @@ module debug_regs
                4'ha: plus_guard_time <= dbg_di[3:0];
                4'hb: output_mux_bits <= dbg_di;
                4'hc: io_mux_bits <= dbg_di[7:0];
+               4'hd: {cache_disabled, cache_map_sel} <= dbg_di[2:0];
             endcase
          end
          else if (dbg_a == 8'h20 && (dbg_we || dbg_rd) && debug_ready)
@@ -159,6 +165,7 @@ module debug_regs
          4'ha: dbg_do = {12'h0, plus_guard_time};
          4'hb: dbg_do = output_mux_bits;
          4'hc: dbg_do = {8'h0, io_mux_bits};
+         4'hd: dbg_do = {5'h0, cache_disabled, cache_map_sel};
          endcase
       end
       else if (dbg_a[7:4] == 4'h2 && dbg_rd == 1'b1)

@@ -67,7 +67,7 @@
   "RT_MAX_LAYER": "met4",
 
   "ROUTING_CORES": 8,
-  "PL_TARGET_DENSITY_PCT": 65,
+  "PL_TARGET_DENSITY_PCT": 60,
 
   "//": "reduce wasted space",
   "TOP_MARGIN_MULT": 1,

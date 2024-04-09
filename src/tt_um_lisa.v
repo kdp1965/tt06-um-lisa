@@ -212,6 +212,7 @@ module tt_um_lisa
    // QSPI Arbiter Lisa data bus signals
    // ==========================================================================
    wire [23:0]          lisa2_addr;          // 8Mx32
+   wire [15:0]          cache_addr;          // 8Mx32
    wire [15:0]          lisa2_rdata;         // Read data
    wire [15:0]          lisa2_wdata;         // Data to write
    wire [1:0]           lisa2_wstrb;         // Which bytes in the 32-bits to write
@@ -319,8 +320,8 @@ module tt_um_lisa
 
       // The data bus connection to LISA core
       .d_addr              ( d_addr               ),
-      .d_i                 ( d_i                  ),
-      .d_o                 ( d_o                  ),
+      .d_i                 ( d_o                  ),
+      .d_o                 ( d_i                  ),
       .d_valid             ( d_valid              ),
       .d_we                ( d_we                 ),
       .d_rd                ( d_rd                 ),
@@ -338,7 +339,7 @@ module tt_um_lisa
       .cache_map_sel       ( cache_map_sel        ), 
 
       // Interface to the QSPI controller
-      .qspi_addr           ( lisa2_addr[15:0]     ),
+      .qspi_addr           ( cache_addr           ),
       .qspi_rdata          ( lisa2_rdata          ),
       .qspi_wdata          ( lisa2_wdata          ),
       .qspi_wstrb          ( lisa2_wstrb          ),
@@ -348,6 +349,7 @@ module tt_um_lisa
       .qspi_valid          ( lisa2_valid          ),
       .qspi_xfer_len       ( lisa2_xfer_len       )
    );
+   assign lisa2_addr = { lisa2_base_addr, 8'h0 } | {8'h0, cache_addr};
 
    // ==========================================================================
    // Instantiate the DATA RAM
@@ -481,7 +483,7 @@ module tt_um_lisa
 //   assign lisa2_wdata = 'h0;
 //   assign lisa2_wstrb = 'h0;
 //   assign lisa2_xfer_len = 'h0;
-   assign lisa2_ready_ack = 1'b1;
+//   assign lisa2_ready_ack = 1'b1;
 
    // ==========================================================================
    // Instantiate the QQSPI controller

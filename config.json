@@ -67,6 +67,8 @@
   "RT_MAX_LAYER": "met4",
 
   "ROUTING_CORES": 8,
+  "PL_TARGET_DENSITY_PCT": 65,
+  "GRT_ALLOW_CONGESTION" : true,
 
   "//": "reduce wasted space",
   "TOP_MARGIN_MULT": 1,

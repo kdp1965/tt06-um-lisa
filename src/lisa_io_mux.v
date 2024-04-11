@@ -128,8 +128,15 @@ module lisa_io_mux
    // UART signals
    input  wire             baud_ref,            // Baud rate reference clock
    input  wire             debug_tx,            // The UART TX data
-   output wire             debug_rx             // RX data to debugger from active input
+   output wire             debug_rx,            // RX data to debugger from active input
 
+   // I2C - can be muxed on uio[5:4]
+   output wire             scl_pad_i,
+   input  wire             scl_pad_o,
+   input  wire             scl_padoen_o,
+   output wire             sda_pad_i,
+   input  wire             sda_pad_o,
+   input  wire             sda_padoen_o
 );
    // Mux control and routing signals
    wire [1:0]              out_mux_sel[7:0];    // Output mux selection per output
@@ -142,9 +149,11 @@ module lisa_io_mux
 
    // CE latch signals
    reg                     ce_latch;
-   reg                     ce_data;
-   reg  [1:0]              ce_state;
+   reg                     ce_latch_n;
    reg  [1:0]              ce_last;
+   reg  [1:0]              ce_last_n;
+   reg  [1:0]              last_mux;
+   reg  [1:0]              last_mux_n;
    wire                    custom_pmod;
 
    // ==========================================================================
@@ -228,20 +237,24 @@ module lisa_io_mux
 
    always @*
    begin
-      s_uio_out[0] = custom_pmod ? ce_latch : ce[0];
-      s_uio_out[1] = ce_data ? ce[0] : sio0_si_mosi_o;
-      s_uio_out[2] = ce_data ? ce[1] : sio1_so_miso_o;
+      s_uio_out[0] = custom_pmod ? ce_latch & ce_latch_n : ce[0];
+      s_uio_out[1] = ce_latch ? ce[0] : sio0_si_mosi_o;
+      s_uio_out[2] = ce_latch ? ce[1] : sio1_so_miso_o;
       s_uio_out[3] = sclk;
 
       // UIO bit 4
       case (io_mux_bits[1:0])
          2'h1:    s_uio_out[4] = lisa_portb_i[0];
+         2'h2:    s_uio_out[4] = scl_pad_o;
+         2'h3:    s_uio_out[4] = sda_pad_o;
          default: s_uio_out[4] = 1'b0;
       endcase
 
       // UIO bit 5
       case (io_mux_bits[3:2])
          2'h1:    s_uio_out[5] = lisa_portb_i[1];
+         2'h2:    s_uio_out[5] = sda_pad_o;
+         2'h3:    s_uio_out[5] = scl_pad_o;
          default: s_uio_out[5] = 1'b0;
       endcase
 
@@ -266,19 +279,23 @@ module lisa_io_mux
    always @*
    begin
       s_uio_oe[0] = 1'b1;                // CE
-      s_uio_oe[1] = ce_data ? 1'b1 : sio_oe[0];           // MOSI
-      s_uio_oe[2] = ce_data ? 1'b1 : sio_oe[1];           // MOSI
+      s_uio_oe[1] = ce_latch ? 1'b1 : sio_oe[0];           // MOSI
+      s_uio_oe[2] = ce_latch ? 1'b1 : sio_oe[1];           // MOSI
       s_uio_oe[3] = 1'b1;                // SCLK
 
       // UIO bit 4
       case (io_mux_bits[1:0])
          2'h1:    s_uio_oe[4] = lisa_portb_dir_i[0];
+         2'h2:    s_uio_oe[4] = scl_padoen_o;
+         2'h3:    s_uio_oe[4] = sda_padoen_o;
          default: s_uio_oe[4] = 1'b0;
       endcase
 
       // UIO bit 5
       case (io_mux_bits[3:2])
          2'h1:    s_uio_oe[5] = lisa_portb_dir_i[1];
+         2'h2:    s_uio_oe[5] = sda_padoen_o;
+         2'h3:    s_uio_oe[5] = scl_padoen_o;
          default: s_uio_oe[5] = 1'b0;
       endcase
 
@@ -299,9 +316,46 @@ module lisa_io_mux
       endcase
    end
 
+   // ==========================================================================
+   // Assign I2C inputs
+   // ==========================================================================
+   assign scl_pad_i = io_mux_bits[1:0] == 2'h2 ? uio_in[4] : io_mux_bits[1:0] == 2'h3 ? 
+                      uio_in[5] : 1'b1;
+   assign sda_pad_i = io_mux_bits[3:2] == 2'h2 ? uio_in[5] : io_mux_bits[3:2] == 2'h3 ? 
+                      uio_in[4] : 1'b1;
+
    // ==============================================================
    // Generate logic for latching CE outputs for custom PMOD
    // ==============================================================
+   always @(posedge clk)
+      if (~rst_n)
+      begin
+         ce_last  <= 2'h3;
+         last_mux <= 2'h0;
+      end
+      else
+      begin
+         ce_last <= ce;
+         last_mux <= io_mux_bits[7:6];
+      end
+
+   // ==============================================================
+   // Generate logic for latching CE outputs for custom PMOD
+   // ==============================================================
+   always @(negedge clk)
+      if (~rst_n)
+      begin
+         ce_last_n  <= 2'h3;
+         last_mux_n <= 2'h0;
+      end
+      else
+      begin
+         ce_last_n <= ce;
+         last_mux_n <= io_mux_bits[7:6];
+      end
+   assign ce_latch_n = custom_pmod && (ce_last_n != ce || io_mux_bits[7:6] != last_mux_n);
+
+/*
    always @(posedge clk)
    begin
       if (~rst_n)
@@ -318,7 +372,7 @@ module lisa_io_mux
          ce_last <= ce;
 
          // Test if we are in io mux mode 3
-         if (io_mux_bits[7:5] == 2'h3)
+         if (io_mux_bits[7:6] == 2'h3)
          begin
             // This mode is for the custom PMOD board
             case (ce_state)
@@ -356,8 +410,10 @@ module lisa_io_mux
          end
       end
    end
+*/
 
    assign custom_pmod = io_mux_bits[7:6] == 2'h3;
+   assign ce_latch    = custom_pmod && (ce != ce_last || io_mux_bits[7:6] != last_mux);
 
 endmodule // lisa_io_mux
 

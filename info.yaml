@@ -26,11 +26,14 @@ project:
     - "lisa_qspi_controller.v"
     - "lisa_rx8n.v"
     - "lisa_tx8n.v"
+    - "lisa_i2c.v"
     - "debug_ctrl.v"
     - "debug_autobaud.v"
     - "debug_brg.v"
     - "debug_regs.v"
     - "data_cache.v"
+    - "i2c_master_byte_ctrl.v"
+    - "i2c_master_bit_ctrl.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:

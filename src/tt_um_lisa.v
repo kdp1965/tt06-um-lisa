@@ -150,7 +150,7 @@ module tt_um_lisa
    // ==========================================================================
    wire    [7:0]        porta;
    wire    [7:0]        porta_in;   
-//   wire    [7:0]        porta_dir;
+   wire    [7:0]        porta_dir;
    wire    [3:0]        portb;
    wire    [3:0]        portb_in;
    wire    [3:0]        portb_dir;
@@ -164,6 +164,16 @@ module tt_um_lisa
    wire                 lisa_rx_rd;
    wire                 lisa_rx_data_avail;
    wire                 lisa_tx_buf_empty;
+
+   // ==========================================================================
+   // Lisa I2C
+   // ==========================================================================
+   wire                 scl_pad_i;
+   wire                 scl_pad_o;
+   wire                 scl_padoen_o;
+   wire                 sda_pad_i;
+   wire                 sda_pad_o;
+   wire                 sda_padoen_o;
 
    // ==========================================================================
    // Baud rate control signals
@@ -401,7 +411,7 @@ module tt_um_lisa
       // GPIO signals                           
       .porta               ( porta              ),
       .porta_in            ( porta_in           ),
-//      .porta_dir           ( porta_dir          ),
+      .porta_dir           ( porta_dir          ),
       .portb               ( portb              ),
       .portb_in            ( portb_in           ),
       .portb_dir           ( portb_dir          ),
@@ -412,7 +422,15 @@ module tt_um_lisa
       .uart_rx_rd          ( lisa_rx_rd         ),
       .uart_rx_d           ( lisa_rx_d          ),
       .uart_rx_data_avail  ( lisa_rx_data_avail ),
-      .uart_tx_buf_empty   ( lisa_tx_buf_empty  )
+      .uart_tx_buf_empty   ( lisa_tx_buf_empty  ),
+
+      // I2C signals
+      .scl_pad_i           ( scl_pad_i          ),
+      .scl_pad_o           ( scl_pad_o          ),
+      .scl_padoen_o        ( scl_padoen_o       ),
+      .sda_pad_i           ( sda_pad_i          ),
+      .sda_pad_o           ( sda_pad_o          ),
+      .sda_padoen_o        ( sda_padoen_o       )
    );
 
    // ==========================================================================
@@ -683,6 +701,7 @@ module tt_um_lisa
       .sio3_o              ( sio3_o             ),
       .sio_oe              ( sio_oe             ),
 
+      // Lisa parallel port signals
       .lisa_porta_i        ( porta              ),
       .lisa_porta_o        ( porta_in           ),
       .lisa_portb_i        ( portb              ),
@@ -692,6 +711,14 @@ module tt_um_lisa
       // UART inputs
       .baud_ref            ( baud_ref           ),
       .debug_tx            ( debug_tx           ),
+
+      // I2C signals
+      .scl_pad_i           ( scl_pad_i          ),
+      .scl_pad_o           ( scl_pad_o          ),
+      .scl_padoen_o        ( scl_padoen_o       ),
+      .sda_pad_i           ( sda_pad_i          ),
+      .sda_pad_o           ( sda_pad_o          ),
+      .sda_padoen_o        ( sda_padoen_o       ),
 
       // Muxed outputs
       .debug_rx            ( debug_rx           ) 

@@ -17,6 +17,7 @@ VERILOG_SOURCES += $(SRC)/lisa_qspi_controller.v $(SRC)/lisa_io_mux.v
 VERILOG_SOURCES += $(SRC)/lisa_div.v $(SRC)/data_cache.v
 VERILOG_SOURCES += $(SRC)/debug_ctrl.v $(SRC)/debug_autobaud.v
 VERILOG_SOURCES += $(SRC)/debug_brg.v $(SRC)/debug_regs.v
+VERILOG_SOURCES += $(SRC)/lisa_i2c.v $(SRC)/i2c_master_byte_ctrl.v $(SRC)/i2c_master_bit_ctrl.v
 VERILOG_SOURCES += $(PWD)/psram.v $(PWD)/spiflash.v
 
 else

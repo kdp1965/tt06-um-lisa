@@ -241,12 +241,16 @@ module lisa_core
    reg  [7:0]                 acc_delayed_val_val;
    reg                        acc_delayed_val_load;
    reg                        acc_ld_misc;
+   wire                       op_ret;
+   wire                       op_rc;
+   wire                       op_rz;
    wire                       op_adx;
    wire                       op_ldx;
    wire                       op_addax;
    wire                       op_addaxu;
    wire                       op_subax;
    wire                       op_subaxu;
+   wire                       op_adc;
    wire                       op_ads;
    wire                       op_tax;
    wire                       op_taxu;
@@ -291,10 +295,18 @@ module lisa_core
    wire                       op_brk;
    wire                       op_notz;
    wire                       op_div_start;
+   wire                       op_add;
+   wire                       op_sub;
+   wire                       op_and;
+   wire                       op_or;
+   wire                       op_xor;
+   wire                       op_ldax;
    wire  [15:0]               div_divisor;
    wire  [15:0]               div_dividend;
    wire  [15:0]               div_result;
    wire                       div_ready;
+   wire                       d_valid_rd;
+   wire                       d_ok;
 
    // Debugger signals
    reg                        d_we_r;
@@ -323,7 +335,11 @@ module lisa_core
                        (inst[`PWORD_SIZE-1 -: 9] == 9'b100010100) ||
                        (inst[`PWORD_SIZE-1 -: 9] == 9'b100010110 && cflag == 1) ||
                        (inst[`PWORD_SIZE-1 -: 9] == 9'b100010111 && zflag == 1));
+   assign op_ret      = inst[`PWORD_SIZE-1 -: 9] == 9'b100010100;
+   assign op_rc       = inst[`PWORD_SIZE-1 -: 9] == 9'b100010110;
+   assign op_rz       = inst[`PWORD_SIZE-1 -: 9] == 9'b100010111;
    assign op_adx      = inst[`PWORD_SIZE-1 -: 6] == 6'b100110;
+   assign op_adc      = inst[`PWORD_SIZE-1 -: 6] == 6'b100100;
    assign op_ads      = inst[`PWORD_SIZE-1 -: 6] == 6'b100101;
    assign op_tax      = inst[`PWORD_SIZE-1 -: 13] == 13'b1010000100000;
    assign op_taxu     = inst[`PWORD_SIZE-1 -: 13] == 13'b1010000100001;
@@ -340,6 +356,12 @@ module lisa_core
    assign op_if       = inst[`PWORD_SIZE-1 -: 8]  == 8'b10100010;
    assign op_swap     = inst[`PWORD_SIZE-1 -: 6]  == 6'b111011;
    assign op_swapi    = inst[`PWORD_SIZE-1 -: 6]  == 6'b110111;
+   assign op_add      = inst[`PWORD_SIZE-1 -: 6]  == 6'b110000;
+   assign op_sub      = inst[`PWORD_SIZE-1 -: 6]  == 6'b110010;
+   assign op_and      = inst[`PWORD_SIZE-1 -: 6]  == 6'b110100;
+   assign op_or       = inst[`PWORD_SIZE-1 -: 6]  == 6'b110110;
+   assign op_xor      = inst[`PWORD_SIZE-1 -: 6]  == 6'b111000;
+   assign op_ldax     = inst[`PWORD_SIZE-1 -: 6]  == 6'b111100;
    assign op_ldxx     = inst[`PWORD_SIZE-1 -: 7]  == 7'b1100110;
    assign op_stxx     = inst[`PWORD_SIZE-1 -: 7]  == 7'b1100111;
    assign op_btst     = inst[`PWORD_SIZE-1 -: 11] == 11'b10_1000_0001_0;
@@ -444,14 +466,20 @@ module lisa_core
    end
 
    // TODO:  add read conditions to d_valid
-   assign d_valid = d_we & ~d_periph;
-   assign d_we   = dbg_d_access ? dbg_d_we : (stop && dbg_a == 8'h6) ? dbg_we : d_we_r;
-   assign d_periph = ((op_sta | op_lda | op_swapi) & inst[9] & !dbg_d_access) | dbg_d_periph;
-   assign d_rd   = dbg_d_access ? dbg_d_rd : d_periph & cond[0] & exec_state;
-   assign dbg_inc = (dbg_we | dbg_rd) && dbg_a == 8'hf;
-   assign sp_sum_op = op_sra | op_lra | op_ads | op_pop_a | op_push_a | (op_swap & inst[9]) |
-                      op_push_ix | op_pop_ix | op_stxx | op_ldxx | op_shl16 | op_shr16 | op_any_div |
-                      op_lddiv;
+   assign d_valid    = (d_we & ~d_periph) | (d_valid_rd & (exec_state | stg2_state));
+   assign d_ok       = d_ready || !d_valid;
+   assign d_we       = dbg_d_access ? dbg_d_we : (stop && dbg_a == 8'h6) ? dbg_we : d_we_r;
+   assign d_periph   = ((op_sta | op_lda | op_swapi) & inst[9] & !dbg_d_access) | dbg_d_periph;
+   assign d_valid_rd = op_mul | op_mulu | op_ret | op_rz | op_rc | op_call_ix | op_call |
+                       op_adc | op_ads | op_adx | op_dcx | op_shl16 | op_shr16 | op_pop_a |
+                       op_lddiv | op_lra | op_add | op_sub | op_cmp | op_dcx | op_inx |
+                       op_ldxx | op_and | op_or | (op_swapi & !inst[9] & !dbg_d_access) | op_xor | op_swap |
+                       (op_lda & !inst[9] & !dbg_d_access) | op_ldax;
+   assign d_rd       = dbg_d_access ? dbg_d_rd : d_periph & cond[0] & exec_state;
+   assign dbg_inc    = (dbg_we | dbg_rd) && dbg_a == 8'hf;
+   assign sp_sum_op  = op_sra | op_lra | op_ads | op_pop_a | op_push_a | (op_swap & inst[9]) |
+                       op_push_ix | op_pop_ix | op_stxx | op_ldxx | op_shl16 | op_shr16 | op_any_div |
+                       op_lddiv;
    assign d_addr_imm = inst[`PWORD_SIZE-6] == 1'b1 && inst[`PWORD_SIZE-4] == 1'b1 &&
                        inst[`PWORD_SIZE-2] == 1'b1;
    assign d_addr = dbg_d_access ? dbg_d_addr : stop ? ix : d_addr_imm ? {{(D_BITS-D_STCK){1'b0}}, inst[D_STCK-1:0]} : (sp_sum_op) ? sp_sum :
@@ -514,7 +542,7 @@ module lisa_core
                    inst[`PWORD_SIZE-1 -: 6]  == 6'b111010 ||         // cmp a,[ix+#imm8]
                    inst[`PWORD_SIZE-1 -: 6]  == 6'b101001 ||         // cpi a,#imm8
                    inst[`PWORD_SIZE-1 -: 6]  == 6'b100111 ||         // dcx
-                   inst[`PWORD_SIZE-1 -: 6]  == 6'b101001 ||         // inx
+                   inst[`PWORD_SIZE-1 -: 6]  == 6'b111001 ||         // inx
                    inst[`PWORD_SIZE-1 -: 12] == 12'b101000000000 ||  // shl,shr,ldc
                    inst[`PWORD_SIZE-1 -: 12] == 12'b100010101101 ||  // cpx
                    op_restc;                                         // Restore c
@@ -602,7 +630,7 @@ module lisa_core
             ra_load = 1'b1;
             {ra_cond_val, ra_val} = {ix_cond, ix};
          end
-         else if (cond[0] & op_lddiv)
+         else if (cond[0] & op_lddiv & d_ok)
          begin
             ra_load = 1'b1;
             ra_val[7:0] = d_i;
@@ -611,7 +639,7 @@ module lisa_core
       // Process 2-stage opcode
       2'h3:
          // Perform lra to save back to ra
-         if (op_lra)
+         if (op_lra & d_ok)
          begin
             ra_load = 1'b1;
             if (stage_two)
@@ -683,7 +711,7 @@ module lisa_core
          // Execute and Increment PC
          2'h2:
             begin
-               if (d_ready | !d_valid)
+               if (d_ok)
                begin
                   // Test for 2-stage operations
                   if (cond[0] && (op_sra | op_lra | op_push_ix | op_pop_ix | op_stxx | op_ldxx |
@@ -698,12 +726,12 @@ module lisa_core
                      pc <= pc_inc;
                      state <= 2'h0;
                   end
-
-                  // Test for stax ix+imm8 operation or swap a,[ix+imm8]
-                  if (cond[0] && (op_st || op_swap || op_swapi || op_sra || op_push_a ||
-                           op_dcx || op_inx || op_push_ix || op_stxx || op_shl16 | op_shr16))
-                     d_we_r <= 1'b1;
                end
+
+               // Test for stax ix+imm8 operation or swap a,[ix+imm8]
+               if (cond[0] && (op_st || op_swap || op_swapi || op_sra || op_push_a ||
+                   op_dcx || op_inx || op_push_ix || op_stxx || op_shl16 | op_shr16))
+               d_we_r <= 1'b1;
             end
 
          // Process 2-stage opcode
@@ -712,32 +740,41 @@ module lisa_core
                // Process the stage number and state
                if (stage_two)
                begin
-                  // Finished with 2-stage opcode.  Go fetch next instruction
-                  pc <= pc_inc;
-                  state <= 2'h0;
-                  stage_two <= 1'b0;
+                  if (d_ok)
+                  begin
+                     // Finished with 2-stage opcode.  Go fetch next instruction
+                     pc <= pc_inc;
+                     state <= 2'h0;
+                     stage_two <= 1'b0;
 
-                  // Drive WE low
-                  d_we_r <= 1'b0;
+                     // Drive WE low
+                     d_we_r <= 1'b0;
+                  end
                end
                else
                begin
                   if (!op_any_div)
                   begin
-                     // Back to execute stage to process 2nd stage
-                     state <= 2'h2;
-                     stage_two <= 1'b1;
+                     if (d_ok)
+                     begin
+                        // Back to execute stage to process 2nd stage
+                        state <= 2'h2;
+                        stage_two <= 1'b1;
 
-                     // Drive WE low
-                     d_we_r <= 1'b0;
+                        // Drive WE low
+                        d_we_r <= 1'b0;
+                     end
                   end
                   else
                   begin
                      // Wait for the div to be ready
                      if (div_ready)
                      begin
-                        pc <= pc_inc;
-                        state <= 2'h0;
+                        if (d_ok)
+                        begin
+                           pc <= pc_inc;
+                           state <= 2'h0;
+                        end
 
                         // Write MSB of result only if int dividend
                         if (inst[1] == 0)
@@ -775,41 +812,44 @@ module lisa_core
          cond <= 2'h3;
       else
       begin
-         if (op_if & exec_state)
+         if (d_ok)
          begin
-            case (inst[4:3])
-            2'h0: // IF
-               begin
-                  cond[0] <= cond_load;
-                  cond[1] <= 1'b1;
-               end
-            2'h1: // IFTT
-               begin
-                  cond[0] <= cond_load;
-                  cond[1] <= cond_load;
-               end
-            2'h2: // IFTE
-               begin
-                  cond[0] <= cond_load;
-                  cond[1] <= ~cond_load;
-               end
-           endcase 
-         end
-         else if (cond[0] && decode_state &&  (jump_taken || br_taken || op_call_ix || op_jmp_ix))
-            // Set both cond bits to 1 on any branch
-            cond <= 2'h3;
-         else if (cond[0] && decode_state && ret_taken)
-         begin
-            cond[1] <= 1'b1;
-            cond[0] <= ra_cond;     // Pop condition code from ra
-         end
-         else if (exec_state & cond[0] & op_ldx)
-            cond[0] <= 1'b0;
-         else if ((exec_state & (~(op_sra | op_lra | op_push_ix | op_pop_ix) | ldx_stage_two)) ||
-                  (stg2_state && stage_two == 1'b1))
-         begin
-            cond[1] <= 1'b1;
-            cond[0] <= cond[1];
+            if (op_if & exec_state)
+            begin
+               case (inst[4:3])
+               2'h0: // IF
+                  begin
+                     cond[0] <= cond_load;
+                     cond[1] <= 1'b1;
+                  end
+               2'h1: // IFTT
+                  begin
+                     cond[0] <= cond_load;
+                     cond[1] <= cond_load;
+                  end
+               2'h2: // IFTE
+                  begin
+                     cond[0] <= cond_load;
+                     cond[1] <= ~cond_load;
+                  end
+              endcase 
+            end
+            else if (cond[0] && decode_state &&  (jump_taken || br_taken || op_call_ix || op_jmp_ix))
+               // Set both cond bits to 1 on any branch
+               cond <= 2'h3;
+            else if (cond[0] && decode_state && ret_taken)
+            begin
+               cond[1] <= 1'b1;
+               cond[0] <= ra_cond;     // Pop condition code from ra
+            end
+            else if (exec_state & cond[0] & op_ldx)
+               cond[0] <= 1'b0;
+            else if ((exec_state & (~(op_sra | op_lra | op_push_ix | op_pop_ix) | ldx_stage_two)) ||
+                     (stg2_state && stage_two == 1'b1))
+            begin
+               cond[1] <= 1'b1;
+               cond[0] <= cond[1];
+            end
          end
          else if (stop && dbg_we && dbg_a == 8'h1 && dbg_di[14])
             cond <= dbg_di[11:10];
@@ -833,8 +873,8 @@ module lisa_core
       else if (exec_state && cond[0])
       begin
          // Implement IX
-         if (op_adx | op_tax | op_taxu | op_xchg_sp | op_xchg_ra | op_spix |
-             op_addax | op_addaxu | op_subax | op_subaxu | op_lddiv)
+         if ((op_adx | op_tax | op_taxu | op_xchg_sp | op_xchg_ra | op_spix |
+             op_addax | op_addaxu | op_subax | op_subaxu | op_lddiv) & d_ok)
          begin
             ix_load = 1'b1;
             case (1'b1)
@@ -858,7 +898,7 @@ module lisa_core
       else if (stg2_state || delayed_sp_dec)
       begin
          // Perform pop IX
-         if (op_pop_ix | op_ldxx)
+         if ((op_pop_ix | op_ldxx) & d_ok)
          begin
             ix_load = 1'b1;
             if (stage_two)
@@ -924,7 +964,7 @@ module lisa_core
          if (exec_state && cond[0])
          begin
             // Implement SP
-            if (op_xchg_sp | op_ads | op_push_a | op_pop_a)
+            if ((op_xchg_sp | op_ads | op_push_a | op_pop_a) & d_ok)
             case (1'b1)
                op_ads:     sp <= sp_sum;
                op_xchg_sp: sp <= ix[D_BITS-1:0];
@@ -936,12 +976,15 @@ module lisa_core
          end
          else if (stg2_state || delayed_sp_dec)
          begin
-            if (op_sra | op_push_ix | delayed_sp_dec)
-               sp <= sp - {{(D_BITS-1){1'b0}}, 1'h1};
-            else if (op_lra | op_pop_ix)
-               sp <= sp + {{(D_BITS-1){1'b0}}, 1'h1};
+            if (d_ok)
+            begin
+               if (op_sra | op_push_ix | delayed_sp_dec)
+                  sp <= sp - {{(D_BITS-1){1'b0}}, 1'h1};
+               else if (op_lra | op_pop_ix)
+                  sp <= sp + {{(D_BITS-1){1'b0}}, 1'h1};
 
-            delayed_sp_dec <= 1'b0;
+               delayed_sp_dec <= 1'b0;
+            end
          end
          else if (stop && dbg_we && dbg_a == 8'h3)
             sp <= dbg_di[D_BITS-1:0];
@@ -978,26 +1021,29 @@ module lisa_core
       end
       else
       begin
-         // Load the accumulator (test for ret # opcode since RET doesn't go to exec_state)
-         if ((exec_state || inst[`PWORD_SIZE-1 -: 6] == 6'b100011) && cond[0] && acc_load_val[8])
-            acc <= acc_load_val[7:0];
-         else if (stg2_state && div_ready)
-            acc <= acc_load_val[7:0];
-         else if (acc_delayed_load)
-            acc <= acc_delayed_val;
+         if (d_ok)
+         begin
+            // Load the accumulator (test for ret # opcode since RET doesn't go to exec_state)
+            if ((exec_state || inst[`PWORD_SIZE-1 -: 6] == 6'b100011) && cond[0] && acc_load_val[8])
+               acc <= acc_load_val[7:0];
+            else if (stg2_state && div_ready)
+               acc <= acc_load_val[7:0];
+            else if (acc_delayed_load)
+               acc <= acc_delayed_val;
 
-         // Test for reset
-         if (reset)
-            acc_delayed_load <= 1'b0;
+            // Test for reset
+            if (reset)
+               acc_delayed_load <= 1'b0;
 
-         // For swap to memory, loading acc must be delayed one cycle
-         else if (exec_state && (op_swap | op_swapi | op_shl16 | op_shr16) && cond[0])
-            acc_delayed_load <= 1'b1;
-         else
-            acc_delayed_load <= 1'b0;
+            // For swap to memory, loading acc must be delayed one cycle
+            else if (exec_state && (op_swap | op_swapi | op_shl16 | op_shr16) && cond[0])
+               acc_delayed_load <= 1'b1;
+            else
+               acc_delayed_load <= 1'b0;
 
-         if (acc_delayed_val_load)
-            acc_delayed_val <= acc_delayed_val_val;
+            if (acc_delayed_val_load)
+               acc_delayed_val <= acc_delayed_val_val;
+         end
 
          // Implement amode register
          if (reset)
@@ -1029,7 +1075,7 @@ module lisa_core
       begin
          if (reset)
             {zflag_load, zflag_val} = {1'b1, 1'b0};
-         else
+         else if (d_ok)
             case (1'b1)
                acc_load_val[8]:     {zflag_load, zflag_val} = {1'b1, acc_load_val[7:0] == 8'h00};
                op_btst:             {zflag_load, zflag_val} = {1'b1, acc[inst[2:0]]};
@@ -1059,7 +1105,7 @@ module lisa_core
       end
       else
       begin
-         if (exec_state && cond[0])
+         if (exec_state && cond[0] && d_ok)
          begin
             // Load cflag_save
             if (op_savec)
@@ -1077,7 +1123,7 @@ module lisa_core
    ==========================================================================
    */
    wire cflag_load;
-   assign cflag_load = c_load && exec_state && cond[0];
+   assign cflag_load = c_load && exec_state && cond[0] && d_ok;
 
    generate
    if (WANT_DIV)

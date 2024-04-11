@@ -19,6 +19,7 @@ VERILOG_SOURCES += $(SRC)/debug_ctrl.v $(SRC)/debug_autobaud.v
 VERILOG_SOURCES += $(SRC)/debug_brg.v $(SRC)/debug_regs.v
 VERILOG_SOURCES += $(SRC)/lisa_i2c.v $(SRC)/i2c_master_byte_ctrl.v $(SRC)/i2c_master_bit_ctrl.v
 VERILOG_SOURCES += $(PWD)/psram.v $(PWD)/spiflash.v
+COMPILE_ARGS    += -I$(SRC)
 
 else
 

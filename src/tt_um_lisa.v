@@ -113,7 +113,7 @@ module tt_um_lisa
    // ==========================================================================
    wire   [14:0]        d_addr;
    wire   [7:0]         d_i;
-   wire   [7:0]         d_i_dram;
+   wire   [7:0]         d_i_cache;
    wire   [7:0]         d_i_periph;
    wire   [7:0]         d_o;
    wire                 d_we;
@@ -361,7 +361,7 @@ module tt_um_lisa
       // The data bus connection to LISA core
       .d_addr              ( d_addr               ),
       .d_i                 ( d_o                  ),
-      .d_o                 ( d_i                  ),
+      .d_o                 ( d_i_cache            ),
       .d_valid             ( d_valid              ),
       .d_we                ( d_we                 ),
       .d_rd                ( d_rd                 ),
@@ -420,7 +420,7 @@ module tt_um_lisa
 //                     ({8{d_addr[1:0] == 2'h1}} & ram_do[15:8])  |
 //                     ({8{d_addr[1:0] == 2'h2}} & ram_do[23:16]) |
 //                     ({8{d_addr[1:0] == 2'h3}} & ram_do[31:24]);
-//   assign d_i = d_periph ? d_i_periph : d_i_dram;
+   assign d_i = d_periph ? d_i_periph : d_i_cache;
 
    // ==========================================================================
    // Instantiate a peripheral controller

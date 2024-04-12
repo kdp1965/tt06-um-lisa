@@ -321,7 +321,7 @@ module lisa_core
    wire                       stop;
    wire                       cont_q;
 
-   assign inst = inst_ready ? inst_i : inst_r;
+   assign inst = (inst_ready & !d_we_r) ? inst_i : inst_r;
    assign fetch_state  = state == 2'b00;
    assign decode_state = state == 2'b01;
    assign exec_state   = state == 2'b10;
@@ -427,7 +427,7 @@ module lisa_core
    assign c_cpi = inst[7:0] > acc;
 
    assign i_addr = pc;
-   assign i_fetch = fetch_state & !stop;
+   assign i_fetch = fetch_state  & !stop;
    assign inst_o = dbg_di[`PWORD_SIZE-1 :0];
    assign inst_we = stop && dbg_a == 8'hf && dbg_we == 1'b1;
    assign d_o_shr_val = (amode[0] & cflag) | (amode[1] & d_i[7]);
@@ -466,12 +466,12 @@ module lisa_core
    end
 
    // TODO:  add read conditions to d_valid
-   assign d_valid    = (d_we & ~d_periph) | (d_valid_rd & (exec_state | stg2_state));
+   assign d_valid    = (d_we & ~d_periph) | (d_valid_rd & (exec_state | stg2_state) && !ldx_stage_two);
    assign d_ok       = d_ready || !d_valid;
    assign d_we       = dbg_d_access ? dbg_d_we : (stop && dbg_a == 8'h6) ? dbg_we : d_we_r;
    assign d_periph   = ((op_sta | op_lda | op_swapi) & inst[9] & !dbg_d_access) | dbg_d_periph;
-   assign d_valid_rd = op_mul | op_mulu | op_ret | op_rz | op_rc | op_call_ix | op_call |
-                       op_adc | op_ads | op_adx | op_dcx | op_shl16 | op_shr16 | op_pop_a |
+   assign d_valid_rd = op_mul | op_mulu | 
+                       op_adc | op_dcx | op_shl16 | op_shr16 | op_pop_a |
                        op_lddiv | op_lra | op_add | op_sub | op_cmp | op_dcx | op_inx |
                        op_ldxx | op_and | op_or | (op_swapi & !inst[9] & !dbg_d_access) | op_xor | op_swap |
                        (op_lda & !inst[9] & !dbg_d_access) | op_ldax;
@@ -667,21 +667,29 @@ module lisa_core
       else
       begin
          // Register the instruction
-         if (inst_ready)
+         if (inst_ready & !d_we_r)
             inst_r <= inst_i;
 
          case (state)
-         // Fetch state Just waiting for the Inst SRAM to deliver data
+         // Fetch state waiting for the Inst SRAM to deliver data
+         // or for a delayed write to DATA SRAM to complete
          2'h0:
             begin
-               d_we_r <= 1'b0;
-               dbg_inc_r <= dbg_inc;
-               if (!stop && inst_ready)
-                  state <= 2'h1;    // Switch to decode state
-               else if (dbg_we && dbg_a == 8'h2)
-                  pc <= dbg_di[PC_BITS-1:0];
-               else if (dbg_inc_r && !dbg_inc)
-                  pc <= pc + 1;
+               if (d_we_r)
+               begin
+                  if (d_ok)
+                     d_we_r <= 1'b0;
+               end
+               else
+               begin
+                  dbg_inc_r <= dbg_inc;
+                  if (!stop && inst_ready)
+                     state <= 2'h1;    // Switch to decode state
+                  else if (dbg_we && dbg_a == 8'h2)
+                     pc <= dbg_di[PC_BITS-1:0];
+                  else if (dbg_inc_r && !dbg_inc)
+                     pc <= pc + 1;
+               end
             end
 
          // Decode state
@@ -1449,9 +1457,9 @@ module lisa_core
       if (inst[`PWORD_SIZE-1] == 0)                ascii_instr = "jal";
       if (inst[`PWORD_SIZE-1 -: 6] == 6'h20)       ascii_instr = "ldi";
       if (inst[`PWORD_SIZE-1 -: 6] == 6'h23)       ascii_instr = "ret #";
-      if (inst[`PWORD_SIZE-1 -: 10] == 10'h228)    ascii_instr = "ret";
-      if (inst[`PWORD_SIZE-1 -: 10] == 10'h22C)    ascii_instr = "rc";
-      if (inst[`PWORD_SIZE-1 -: 10] == 10'h227)    ascii_instr = "rz";
+      if (op_ret)                                  ascii_instr = "ret";
+      if (op_rc)                                   ascii_instr = "rc";
+      if (op_rz)                                   ascii_instr = "rz";
       if (inst[`PWORD_SIZE-1 -: 12] == 12'hA14)    ascii_instr = "amode";
       if (inst[`PWORD_SIZE-1 -: 6] == 6'h24)       ascii_instr = "adc";
       if (inst[`PWORD_SIZE-1 -: 14] == 14'h2800)   ascii_instr = "shl";
@@ -1464,15 +1472,18 @@ module lisa_core
       if (inst[`PWORD_SIZE-1 -: 14] == 14'h2858)   ascii_instr = "sra";
       if (inst[`PWORD_SIZE-1 -: 14] == 14'h2859)   ascii_instr = "lra";
       if (inst[`PWORD_SIZE-1 -: 5] == 5'b10101)    ascii_instr = "bnz";
-      if (inst[`PWORD_SIZE-1 -: 5] == 5'b10110)    ascii_instr = "bz";
-      if (inst[`PWORD_SIZE-1 -: 5] == 5'b10111)    ascii_instr = "bnz";
+      if (inst[`PWORD_SIZE-1 -: 5] == 5'b10110)    ascii_instr = "br";
+      if (inst[`PWORD_SIZE-1 -: 5] == 5'b10111)    ascii_instr = "bz";
       if (inst[`PWORD_SIZE-1 -: 6] == 6'h30)       ascii_instr = "add";
       if (inst[`PWORD_SIZE-1 -: 6] == 6'h32)       ascii_instr = "sub";
       if (inst[`PWORD_SIZE-1 -: 6] == 6'h34)       ascii_instr = "and";
+      if (inst[`PWORD_SIZE-1 -: 6] == 6'h35)       ascii_instr = "andi";
       if (inst[`PWORD_SIZE-1 -: 6] == 6'h36)       ascii_instr = "or";
       if (inst[`PWORD_SIZE-1 -: 6] == 6'h38)       ascii_instr = "xor";
-      if (inst[`PWORD_SIZE-1 -: 6] == 6'h3C)       ascii_instr = "ldax";
-      if (inst[`PWORD_SIZE-1 -: 6] == 6'h3E)       ascii_instr = "stax";
+      if (inst[`PWORD_SIZE-1 -: 7] == 7'h78)       ascii_instr = "ldax(ix)";
+      if (inst[`PWORD_SIZE-1 -: 7] == 7'h79)       ascii_instr = "ldax(sp)";
+      if (inst[`PWORD_SIZE-1 -: 7] == 7'h7C)       ascii_instr = "stax(ix)";
+      if (inst[`PWORD_SIZE-1 -: 7] == 7'h7D)       ascii_instr = "stax(sp)";
       if (inst[`PWORD_SIZE-1 -: 6] == 6'h3D)       ascii_instr = "lda";
       if (inst[`PWORD_SIZE-1 -: 6] == 6'h3F)       ascii_instr = "sta";
       if (inst[`PWORD_SIZE-1 -: 6] == 6'h3B)       ascii_instr = "swap";

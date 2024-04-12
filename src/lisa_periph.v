@@ -118,7 +118,7 @@ module lisa_periph
    reg                  ms_rollover;
    wire  [7:0]          porta_read;
    wire  [3:0]          portb_read;
-   reg                  d_o_r;
+   reg   [7:0]          d_o_r;
    wire  [7:0]          i2c_d_o;
 
    always @(posedge clk)

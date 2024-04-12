@@ -4,21 +4,26 @@ This is an 8-Bit Little ISA (LISA) processor.  It includes the following:
 
                                        
                |\   +---------+          +------+   +------+ 
-    rx1 -----*-| |  |  debug  |          | lisa |   | lisa |
-             | | |  |   ctrl  +--------->| qspi |   | qqspi| QSPI
-    rx2 ---*-|-| +->|  Debug  |          |      +<->|      +----> 
-           | | | |  |  Intf   |          | QSPI |   | QPSI |
+    rx1 -----*-| |  |         |          | lisa |   | lisa |
+             | | |  |  Debug  +--------->| qspi |   | qqspi| QSPI
+    rx2 ---*-|-| +->|  Intf   |          |      +<->|      +----> 
+           | | | |  |         |          | QSPI |   | QPSI |
     rx3 -*-|-|-| |  |         +-+        | ARB  |   | Ctrl |
          | | | |/   +---------+ |        +------+   +------+
-         | | |  |        ^      |           ^
-         | | |  |        |      |           |                        
-         v v v  |        v      |        +--+---+   +--------+       
-      +---------++ +-------+  +--------->|      |   |        |       
-      |  debug   | | debug |             | LISA +<->| lisa   |       
-      | autobaud | |  regs | +-------+   | CORE |   | debug  |       
-      |          | |       | | RAM32 |<->|      |   |        |    
-      +----------+ +-------+ +-------+   +------+   +--------+    
-
+         | | |  |        ^      |           ^                  
+         | | |  |Port    |      |           |       +--------+       
+         v v v  |Sel     v      |  +--------+---+   | lisa   |       
+      +---------+-+  +-------+  +->|            +---+ debug  |       
+      |  debug    |  | debug |     |    LISA    |   +--------+       
+      | autobaud  |  |  regs |     |    CORE    |   +--------+       
+      |           |  |       |     |            +---+ Periph |    
+      +-----------+  +-------+     +-+-------+--+   |        |    
+                                     |       |      |    gpio+--> 
+                   +-------+   +-----+-+ +---+---+  |     i2c+--> 
+                   | RAM32 +---+ DATA  | | INST  |  |    UART+-> 
+                   | 128B  |   | CACHE | | CACHE |  | timer  |  
+                   +-------+   +-------+ +-------+  +--------+  
+                                                               
    - Harvard architecture LISA Core (16-bit instruction, 15-bit address space)
    - Debug interface
       * UART controlled
@@ -31,12 +36,15 @@ This is an 8-Bit Little ISA (LISA) processor.  It includes the following:
       * SPI/QSPI programmability (single/quad, port location, CE selects)
    - (Q)SPI interface for instruction fetch
    - Onboard 128 Byte RAM for DATA / DATA CACHE
+   - Data bus CACHE controller with 4 32-byte CACHE lines
+   - Instruction CACHE with a single 4-instruction CACHE line
    - 16-bit programmable timer (with pre-divide)
    - Debug UART available to LISA core also
    - 8-bit Input and Output port (PORTA)
    - 4-bit BIDIR port (PORTB)
    - I2C Master controller
    - Hardware 8x8 integer multiplier
+   - Hardware 16/8 divider
    - Programmable I/O mux for maximum flexibility of I/O usage.
                                                                          
 It uses a 32x32 1RW [DFFRAM](https://github.com/AUCOHL/DFFRAM) macro to implement a 128 bytes (1 kilobit) RAM module.

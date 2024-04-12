@@ -653,9 +653,9 @@ module lisa_core
    // =================================================
    // Implement PC and state control
    // =================================================
-   always @(posedge clk)
+   always @(posedge clk or negedge rst_n)
    begin
-      if (!rst_n || reset)
+      if (!rst_n)
       begin
          inst_r <= 'h0;
          pc <= {PC_BITS{1'b0}};
@@ -670,6 +670,16 @@ module lisa_core
          if (inst_ready & !d_we_r)
             inst_r <= inst_i;
 
+         if (reset)
+         begin
+            inst_r <= 'h0;
+            pc <= {PC_BITS{1'b0}};
+            state <= 2'h0;
+            stage_two <= 1'b0;
+            d_we_r <= 1'b0;
+            dbg_inc_r <= 1'b0;
+         end
+         else
          case (state)
          // Fetch state waiting for the Inst SRAM to deliver data
          // or for a delayed write to DATA SRAM to complete

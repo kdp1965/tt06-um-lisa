@@ -171,7 +171,7 @@ module debug_regs
          4'hb: dbg_do = output_mux_bits;
          4'hc: dbg_do = {8'h0, io_mux_bits};
          4'hd: dbg_do = {5'h0, cache_disabled, cache_map_sel};
-         4'hf: dbg_do = {5'h0, spi_ce_delay, spi_clk_div};
+         4'he: dbg_do = {5'h0, spi_ce_delay, spi_clk_div};
          endcase
       end
       else if (dbg_a[7:4] == 4'h2 && dbg_rd == 1'b1)

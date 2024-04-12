@@ -190,7 +190,6 @@ module lisa_qqspi
          len_count    <= 4'h0;
          xfer_done    <= 1'b0;
          clk_div_r    <= 4'h0;
-         ce_delay_r   <= 7'h0;
       end else begin
          state         <= next_state;
          ce            <= ce_next;

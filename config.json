@@ -8,6 +8,7 @@
                     "src/debug_ctrl.v",     "src/debug_autobaud.v",
                     "src/debug_brg.v",      "src/debug_regs.v",
                     "src/data_cache.v",     "src/lisa_i2c.v",
+                    "src/inst_cache.v",
                     "src/i2c_master_bit_ctrl.v", "src/i2c_master_byte_ctrl.v"],
   "EXTRA_VERILOG_MODELS": ["src/RAM32.v"],
 
@@ -68,7 +69,7 @@
   "RT_MAX_LAYER": "met4",
 
   "ROUTING_CORES": 8,
-  "PL_TARGET_DENSITY_PCT": 55,
+  "PL_TARGET_DENSITY_PCT": 52,
   "GRT_ALLOW_CONGESTION" : true,
 
   "//": "reduce wasted space",

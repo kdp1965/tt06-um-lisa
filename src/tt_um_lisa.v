@@ -320,6 +320,34 @@ module tt_um_lisa
    );
 
    // ==========================================================================
+   // Instantiate the INST CACHE controller
+   // ==========================================================================
+   inst_cache i_inst_cache
+   (
+      .clk                 ( clk                  ),
+      .rst_n               ( rst_n_r[2]           ),
+
+      // Instruction bus                     
+      .core_i_addr         ( core_i_addr          ),
+      .core_inst           ( core_inst            ),
+      .core_inst_i         ( core_inst_o          ),
+      .core_inst_we        ( core_inst_we         ),
+      .core_i_fetch        ( core_i_fetch         ),
+      .core_i_ready        ( core_i_ready         ),
+
+      // Interface to the QSPI controller
+//      .qspi_addr           ( lisa1_addr           ),
+      .qspi_rdata          ( lisa1_rdata          ),
+      .qspi_wdata          ( lisa1_wdata          ),
+      .qspi_wstrb          ( lisa1_wstrb          ),
+      .qspi_ready          ( lisa1_ready          ),
+      .qspi_ready_ack      ( lisa1_ready_ack      ),
+      .qspi_xfer_done      ( lisa1_xfer_done      ),
+      .qspi_valid          ( lisa1_valid          ),
+      .qspi_xfer_len       ( lisa1_xfer_len       )
+   );
+
+   // ==========================================================================
    // Instantiate the DATA CACHE controller
    // ==========================================================================
    data_cache i_data_cache
@@ -640,13 +668,13 @@ module tt_um_lisa
    assign dbg_do         = dbg_do_lisa | dbg_do_regs;
    assign dbg_ready      = dbg_ready_lisa | dbg_ready_regs;
    assign lisa1_addr     = {lisa1_base_addr, 8'h0} | {8'h0, core_i_addr, 1'b0};
-   assign lisa1_valid    = core_i_fetch | core_inst_we;
-   assign lisa1_wstrb    = {core_inst_we, core_inst_we};
-   assign lisa1_wdata    = core_inst_o;
-   assign lisa1_xfer_len = 4'h0;             // Zero means 1 16-bit transfer
-   assign lisa1_ready_ack= 1'b1;             // Always ready
-   assign core_inst      = lisa1_rdata;
-   assign core_i_ready   = lisa1_ready;
+//   assign lisa1_valid    = core_i_fetch | core_inst_we;
+//   assign lisa1_wstrb    = {core_inst_we, core_inst_we};
+//   assign lisa1_wdata    = core_inst_o;
+//   assign lisa1_xfer_len = 4'h0;             // Zero means 1 16-bit transfer
+//   assign lisa1_ready_ack= 1'b1;             // Always ready
+//   assign core_inst      = lisa1_rdata;
+//   assign core_i_ready   = lisa1_ready;
    assign baud_div       = ui_in[6:0];
    assign baud_set       = ui_in[7];
    assign debug_ready_ack= 1'b1;

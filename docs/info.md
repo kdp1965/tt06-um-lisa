@@ -27,26 +27,23 @@ The 128 Byte ram can be used either as a DATA cache for the processor data bus, 
 or the CACHE controller can be disabled, connecting the Lisa processor core to the RAM directly, limiting the 
 data space to 128 bytes.
 
-<pre>                                                                                                      
 
-              |\         +-------------------+                +--------------------+     +-------------------+ 
- rx1  -----*->| |        |                   |                |                    |     |                   |
-           |  | |        |   debug_ctrl      +--------------->|    lisa_qspi       |     |   lisa_qqspi      | QSPI Pins
- rx2  ---*-|->| +------->|                   |                |     controller     +<--->|                   +-----------> 
-         | |  | |        |  Debug Interface  |                |  (QSPI Arbiter)    |     |  QSPI Controller  |
- rx3  -*-|-|->| |        |                   +---+            |                    |     |                   |
-       | | |  |/         +-------------------+   |            +--------------------+     +-------------------+
-       | | |   |                 ^               |                     ^
-       | | |   |                 |               |                     |                                  
-       v v v   |                 v               |            +--------+-----------+     +-------------+       
-      +--------+---+       +--------------+      +----------->|                    |     |  lisa_dbg   |       
-      |   debug    |       |              |                   |    lisa_core       +<--->|  Debug reg/ |       
-      |  autobaud  |       | debug_regs   |    +---------+    |                    |     |    RAM      |       
-      |            |       |              |    |  RAM32  |<-->|                    |     |   access    |    
-      +------------+       +--------------+    +---------+    +--------------------+     +-------------+    
+                 |\         +-------------------+                +--------------------+     +-------------------+ 
+    rx1  -----*->| |        |                   |                |                    |     |                   |
+              |  | |        |   debug_ctrl      +--------------->|    lisa_qspi       |     |   lisa_qqspi      | QSPI Pins
+    rx2  ---*-|->| +------->|                   |                |     controller     +<--->|                   +-----------> 
+            | |  | |        |  Debug Interface  |                |  (QSPI Arbiter)    |     |  QSPI Controller  |
+    rx3  -*-|-|->| |        |                   +---+            |                    |     |                   |
+          | | |  |/         +-------------------+   |            +--------------------+     +-------------------+
+          | | |   |                 ^               |                     ^
+          | | |   |                 |               |                     |                                  
+          v v v   |                 v               |            +--------+-----------+     +-------------+       
+         +--------+---+       +--------------+      +----------->|                    |     |  lisa_dbg   |       
+         |   debug    |       |              |                   |    lisa_core       +<--->|  Debug reg/ |       
+         |  autobaud  |       | debug_regs   |    +---------+    |                    |     |    RAM      |       
+         |            |       |              |    |  RAM32  |<-->|                    |     |   access    |    
+         +------------+       +--------------+    +---------+    +--------------------+     +-------------+    
 
-</pre>                                                          
-                                                                           
                                                                                                          
 Reseting the project **does not** reset the RAM contents.
 

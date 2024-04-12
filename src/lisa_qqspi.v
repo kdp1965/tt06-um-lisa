@@ -62,6 +62,8 @@ module lisa_qqspi
    input wire [CHIP_SELECTS -1:0]   ce_ctrl,
    output reg [CHIP_SELECTS -1:0]   ce,
    input wire [CHIP_SELECTS*4-1:0]  dummy_read_cycles,
+   input wire [3:0]                 spi_clk_div,
+   input wire [6:0]                 spi_ce_delay,
 
    input wire                       custom_spi_cmd,
    input wire [7:0]                 cmd_quad_write
@@ -113,6 +115,9 @@ module lisa_qqspi
    wire [7:0]                 custom_cmd_val;
    wire                       custom_cmd_addr;
    wire                       custom_cmd_read;
+   reg  [3:0]                 clk_div_r;
+   reg  [3:0]                 clk_div_next;
+   reg  [6:0]                 ce_delay_r;
 
    assign write = |wstrb;
    assign read = ~write;
@@ -155,6 +160,22 @@ module lisa_qqspi
       .wr_buffer  (wr_buffer)
    );
 
+   // ======================================================================
+   // CE delay counter
+   // ======================================================================
+   always @(posedge clk)
+   begin
+      if (!rst_n)
+         ce_delay_r <= 7'h0;
+      else
+      begin
+         if (ce != {CHIP_SELECTS{1'b1}})
+            ce_delay_r <= spi_ce_delay;
+         else if (ce_delay_r != 0)
+            ce_delay_r <= ce_delay_r - 7'h1;
+      end
+   end
+
    always @(posedge clk) begin
       if (!rst_n) begin
          ce           <= ~0;
@@ -168,6 +189,8 @@ module lisa_qqspi
          state        <= S0_IDLE;
          len_count    <= 4'h0;
          xfer_done    <= 1'b0;
+         clk_div_r    <= 4'h0;
+         ce_delay_r   <= 7'h0;
       end else begin
          state         <= next_state;
          ce            <= ce_next;
@@ -181,6 +204,7 @@ module lisa_qqspi
          ready         <= ready_next;
          len_count     <= len_count_next;
          xfer_done     <= xfer_done_next;
+         clk_div_r     <= clk_div_next;
       end
    end
  
@@ -198,17 +222,31 @@ module lisa_qqspi
       xfer_cycles_next = xfer_cycles;
       len_count_next   = len_count;
       xfer_done_next   = xfer_done;
+      clk_div_next     = clk_div_r;
       
       if (|xfer_cycles)
       begin  
          sio_out_next[3:0] = is_quad ? spi_buf[23:20] : {3'b0, spi_buf[23]};
          
-         if (sclk) begin
-           sclk_next = 1'b0;
+         if (sclk)
+         begin
+            if (clk_div_r == 4'h0)
+            begin
+               sclk_next = 1'b0;
+               clk_div_next = spi_clk_div;
+            end
+            else
+               clk_div_next = clk_div_r - 4'h1;
          end else begin
-           sclk_next = 1'b1;
-           spi_buf_next = is_quad ? {spi_buf[19:0], sio_in[3:0]} : {spi_buf[22:0], sio_in[1]};
-           xfer_cycles_next = is_quad ? xfer_cycles - 4 : xfer_cycles - 1;
+            if (clk_div_r == 4'h0)
+            begin
+               clk_div_next = spi_clk_div;
+               sclk_next = 1'b1;
+               spi_buf_next = is_quad ? {spi_buf[19:0], sio_in[3:0]} : {spi_buf[22:0], sio_in[1]};
+               xfer_cycles_next = is_quad ? xfer_cycles - 4 : xfer_cycles - 1;
+            end
+            else
+               clk_div_next = clk_div_r - 4'h1;
          end
       end
       else
@@ -230,9 +268,12 @@ module lisa_qqspi
             end
           
             S1_SELECT_DEVICE: begin
-               ce_next        = ~ce_ctrl;
-               next_state     = S2_CMD;
-               len_count_next = {1'b0, xfer_len};
+               if (ce_delay_r == 7'h0)
+               begin
+                  ce_next        = ~ce_ctrl;
+                  next_state     = S2_CMD;
+                  len_count_next = {1'b0, xfer_len};
+               end
             end
           
             S8_SELECT_WREN: begin

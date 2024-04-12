@@ -69,6 +69,8 @@ module debug_regs
    output wire                custom_spi_cmd,
    output wire [7:0]          cmd_quad_write,
    output reg  [3:0]          plus_guard_time,
+   output reg  [3:0]          spi_clk_div,
+   output reg  [6:0]          spi_ce_delay,
 
    output reg  [15:0]         output_mux_bits,
    output reg  [7:0]          io_mux_bits,
@@ -116,6 +118,8 @@ module debug_regs
          io_mux_bits       <= 8'h0;
          cache_disabled    <= 1'b0;
          cache_map_sel     <= 2'h3;
+         spi_clk_div       <= 4'h0;
+         spi_ce_delay      <= 7'h0;
       end
       else
       begin
@@ -136,6 +140,7 @@ module debug_regs
                4'hb: output_mux_bits <= dbg_di;
                4'hc: io_mux_bits <= dbg_di[7:0];
                4'hd: {cache_disabled, cache_map_sel} <= dbg_di[2:0];
+               4'he: {spi_ce_delay, spi_clk_div} <= dbg_di[10:0];
             endcase
          end
          else if (dbg_a == 8'h20 && (dbg_we || dbg_rd) && debug_ready)
@@ -166,6 +171,7 @@ module debug_regs
          4'hb: dbg_do = output_mux_bits;
          4'hc: dbg_do = {8'h0, io_mux_bits};
          4'hd: dbg_do = {5'h0, cache_disabled, cache_map_sel};
+         4'hf: dbg_do = {5'h0, spi_ce_delay, spi_clk_div};
          endcase
       end
       else if (dbg_a[7:4] == 4'h2 && dbg_rd == 1'b1)

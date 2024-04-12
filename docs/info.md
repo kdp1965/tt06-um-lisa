@@ -2,22 +2,22 @@
 
 This is an 8-Bit Little ISA (LISA) processor.  It includes the following:
 
-
-                 |\    +--------------+            +------------+   +------------+ 
-    rx1  -----*->| |   |              |            | lisa_qspi  |   |            |
-              |  | |   |  debug_ctrl  +----------->| controller |   | lisa_qqspi | QSPI
-    rx2  ---*-|->| +-->|    Debug     |            |            +<->|            +----> 
-            | |  | |   |   Interface  |            |   QSPI     |   |    QPSI    |
-    rx3  -*-|-|->| |   |              +-+          | Arbiter    |   | Controller |
-          | | |  |/    +--------------+ |          +------------+   +------------+
-          | | |   |           ^         |               ^
-          | | |   |           |         |               |                           
-          v v v   |           v         |          +----+-------+   +------------+       
-         +--------+--+  +------------+  +--------->|            |   | lisa_dbg   |       
-         |   debug   |  |            |             |  LISA      +<->| Debug reg/ |       
-         |  autobaud |  | debug_regs | +-------+   |  CORE      |   |   RAM      |       
-         |           |  |            | | RAM32 |<->|            |   |  access    |    
-         +-----------+  +------------+ +-------+   +------------+   +------------+    
+                                       
+               |\   +---------+          +------+   +------+ 
+    rx1 -----*-| |  |  debug  |          | lisa |   | lisa |
+             | | |  |   ctrl  +--------->| qspi |   | qqspi| QSPI
+    rx2 ---*-|-| +->|  Debug  |          |      +<->|      +----> 
+           | | | |  |  Intf   |          | QSPI |   | QPSI |
+    rx3 -*-|-|-| |  |         +-+        | ARB  |   | Ctrl |
+         | | | |/   +---------+ |        +------+   +------+
+         | | |  |        ^      |           ^
+         | | |  |        |      |           |                        
+         v v v  |        v      |        +--+---+   +--------+       
+      +---------++ +-------+  +--------->|      |   |        |       
+      |  debug   | | debug |             | LISA +<->| lisa   |       
+      | autobaud | |  regs | +-------+   | CORE |   | debug  |       
+      |          | |       | | RAM32 |<->|      |   |        |    
+      +----------+ +-------+ +-------+   +------+   +--------+    
 
    - Harvard architecture LISA Core (16-bit instruction, 15-bit address space)
    - Debug interface

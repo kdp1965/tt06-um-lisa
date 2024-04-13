@@ -129,7 +129,7 @@ module debug_autobaud
                end
             end
          end
-         else
+         else if (!s_done)
          begin
             // We found the pulse.  Now wait for the end of the data byte
             // before updating rx_sel 

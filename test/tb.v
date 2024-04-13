@@ -29,8 +29,8 @@ module tb
    wire     [7:0] uio_out;
    wire     [7:0] uio_in;
 
-   wire           ce0;
-   wire           ce1;
+   reg            ce0;
+   reg            ce1;
    wire           sclk;
    wire           dq0;
    wire           dq1;
@@ -45,8 +45,8 @@ module tb
 
    // this part dumps the trace to a vcd file that can be viewed with GTKWave
    initial begin
-     $dumpfile("tb.vcd");
-     $dumpvars(0, tb);
+//     $dumpfile("tb.vcd");
+//     $dumpvars(0, tb);
      #1;
    end
 
@@ -72,7 +72,7 @@ module tb
    // ==========================================================================
    // Connect the QSPI signals to the SPI flash
    // ==========================================================================
-   assign ce0  = uio_out[0];
+   //assign ce0  = uio_out[0];
    assign sclk = uio_out[3];
    assign dq0  = uio_oe[1] ? uio_out[1] : 1'bz;
    assign dq1  = uio_oe[2] ? uio_out[2] : 1'bz;
@@ -85,10 +85,22 @@ module tb
    assign uio_in[6] = uart_port_sel == 2'h2 ? txd : dq2;
    assign uio_in[7] = dq3;
 
+   pullup (dq0);
    pullup (dq1);
    pullup (dq2);
    pullup (dq3);
-   pullup (dq4);
+
+   // ==========================================================================
+   // Implement the "PMOD board level" CE latches
+   // ==========================================================================
+   always @(uio_out[0] or uio_out[1] or uio_out[2])
+   begin
+      if (uio_out[0])
+      begin
+         ce0 = uio_out[1];
+         ce1 = uio_out[2];
+      end
+   end
 
    // ==========================================================================
    // Connect the UART to the port specified
@@ -172,7 +184,7 @@ module tb
       .sck  ( sclk                 ),
       .dio  ( {dq3, dq2, dq1, dq0} )
    );
-   assign ce1 = 1'b1;
+   //assign ce1 = 1'b1;
 
 endmodule
 

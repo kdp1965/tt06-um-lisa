@@ -124,7 +124,7 @@ module lisa_qspi_controller
    assign debug_ready         = c_ready[0];
    assign debug_xfer_done     = c_xfer_done[0];
    assign custom_spi_cmd      = c_active[0] ? debug_custom_spi_cmd : 1'b0;
-   assign cmd_quad_write      = c_active[0] ? debug_cmd_quad_write : 8'h0;
+   assign cmd_quad_write      = debug_cmd_quad_write;
 
    assign c_addr[1]           = lisa1_addr;
    assign c_wdata[1]          = lisa1_wdata;

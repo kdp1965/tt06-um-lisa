@@ -36,8 +36,15 @@ module psram (
   reg [7:0] data;
   reg [7:0] cycle_count;
 
-  //reg [7:0] RAM[8*1024*1024-1:0];  // 8kbytes
-  reg [7:0] RAM[512-1:0];  // 8kbytes
+  //reg [7:0] RAM[32*1024-1:0];  // 32Kbytes
+  reg [7:0] RAM[4*1024-1:0];   // 4Kbytes
+  //reg [7:0] RAM[512-1:0];     // 512 bytes
+
+  initial begin
+   integer c;
+   for (c = 0; c < 4*1024; c = c + 1)
+      RAM[c] = 8'h0;
+  end
 
   always @(negedge ce_n or posedge ce_n)
     if (!ce_n) begin
@@ -91,6 +98,9 @@ module psram (
       data = data << 4;
     end
 
-  assign dio = (state == ST_DR) ? do_ : 4'bz;
+  assign dio[0] = (state == ST_DR) ? do_[0] : 1'bz;
+  assign dio[1] = (state == ST_DR) ? (do_[1] ? 1'bz : 1'b0) : 1'bz;
+  assign dio[2] = (state == ST_DR) ? do_[2] : 1'bz;
+  assign dio[3] = (state == ST_DR) ? do_[3] : 1'bz;
 
 endmodule

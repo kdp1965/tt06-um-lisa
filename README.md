@@ -1,24 +1,43 @@
 ![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg)
 
-## Little ISA (Lisa) 8-Bit processor SOC
+## LISA (Little ISA) 8-Bit microcontroller SOC
 
-This project includes a 32x32 (1024 bits) DFFRAM macro with a single read/write port (1RW) which it
+This project is a fully functional (hopefully)  microcontroller with an 8-bit processor, CACHE RAM,
+peripherals, timer and QSPI interface for fetching instructions and extended RAM size.
+
+It project includes a 32x32 (1024 bits) DFFRAM macro with a single read/write port (1RW) which it
 uses as a DATA CACHE for the 8-bit processor data bus.  The Instruction bus is implemented over the
-SPI / QuadSPI port to either the RP2040 or an external SPI FLASH or SPI SRAM chip.  
+SPI / QuadSPI port to either the RP2040 or an external SPI FLASH or SPI SRAM chip.  Additionally,
+the instruction bus features a 4-entry single line CACHE.
 
-Interface to the project is via UART (auto-senses the port and auto detects the baud rate).  The
+Interface to the project is via Debug UART (auto-senses the port and auto detects the baud rate).  The
 debug interface also supports programming the SPI SRAM, erasing and programming a SPI FLASH, and 
 accessing the LISA core debug features including register access, stop and resume, setting 
 breakpoints, viewing and modifying RAM contents, etc.
 
-The Debugger UART is also available to the LISA processor core by sending it an 'l' command.  After
+The Debugger UART is available to the LISA processor core by sending it an 'l' command.  After
 that, the LISA processor can send / receive data over the UART.  Issuing a "+++" command with a
 0.5s guard time before / after will connect the UART back to the debugger.
 
-The size of this project is 2x8 tiles.
+Peripherals include:
+   - UART (shared with debugger)
+   - 16-Bit timer
+   - GPIO (8-bit A port, 4-bit bidir B port)
+   - I2C Master
+   - I/O Mux to select pin functions
+
+The size of this project is 2x6 tiles.
 
 I have written (in C) and assembler, linker and C compiler (still a work in progress).  Also I have
 a Python based debugger that can load and verify the SPI FLASH, start and stop the core, view registers, etc.
+
+The debug interface has a bank of configuration register that enable configuring the SPI / QSPI interface
+to work with various devices.  It support up to 2 Chip Enable (CE) lines, each of which can be configured
+as either single SPI or Quad SPI.  Additionaly, each can be configured ether as FLASH or SRAM, 16 or 24 bit
+access, and the Debug interface, LISA Instruction CACHE and LISA Data CACHE can be individually configured
+to use either of the two CE lines.  The debugger has special registers to allow sending custom commands to
+the SPI / QSPI device, and there are registers to control the SCLK frequency and delay between successive
+CE activations (to work with RP2040).
 
 More documentation to come...
 

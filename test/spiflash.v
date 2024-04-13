@@ -66,6 +66,9 @@ module spiflash #(
   reg spi_io_vld;
 
   reg powered_up = 1;  // TODO workaround for KianV not sending power up (0xab) command
+  reg wren = 0;
+  reg busy = 0;
+  integer busycount = 0;
 
   localparam [3:0] mode_spi = 1;
   localparam [3:0] mode_dspi_rd = 2;
@@ -89,7 +92,7 @@ module spiflash #(
   reg io3_dout = 0;
 
   assign #1 io0 = io0_oe ? io0_dout : 1'bz;
-  assign #1 io1 = io1_oe ? io1_dout : 1'bz;
+  assign #1 io1 = io1_oe ? (io1_dout == 1'b1 ? 1'bz : 1'b0) : 1'bz;
   assign #1 io2 = io2_oe ? io2_dout : 1'bz;
   assign #1 io3 = io3_oe ? io3_dout : 1'bz;
 
@@ -103,8 +106,12 @@ module spiflash #(
   assign #1 io2_delayed = io2;
   assign #1 io3_delayed = io3;
 
+  //localparam flash_size = 16*1024;
+  localparam flash_size = 512;
+
   // 16 MB (128Mb) Flash
-  reg [7:0] memory[0:16*1024*1024-1];
+  //reg [7:0] memory[0:16*1024*1024-1];
+  reg [7:0] memory[0:flash_size-1];
 
   initial begin
     $display("Memory 5 bytes = 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x", memory[0],
@@ -123,6 +130,17 @@ module spiflash #(
 
       if (bytecount == 1) begin
         spi_cmd = buffer;
+
+        if (spi_cmd == 8'h06) wren = 1;
+
+        if (spi_cmd == 8'h05)
+        begin
+          buffer = {6'h0, wren, busy};
+          if (busycount > 0)
+             busycount = busycount - 1;
+          else
+             busy = 0;
+        end
 
         if (spi_cmd == 8'hab) powered_up = 1;
 
@@ -207,6 +225,45 @@ module spiflash #(
         end
       end
 
+      if (powered_up && spi_cmd == 'hd8) begin
+        if (bytecount == 2) spi_addr[23:16] = buffer;
+
+        if (bytecount == 3) spi_addr[15:8] = buffer;
+
+        if (bytecount == 4) spi_addr[7:0] = buffer;
+
+        if (bytecount >= 4) begin
+          integer count;
+
+          if (wren)
+          begin
+            for (count = 0; count < 4096; count = count + 1)
+               if (spi_addr + count < flash_size)
+                  memory[spi_addr+count] = 8'hFF;
+            busycount = 4;
+            $display("FLASH Erased\n");
+          end
+        end
+      end
+
+      if (powered_up && spi_cmd == 'h02) begin
+        if (bytecount == 2) spi_addr[23:16] = buffer;
+
+        if (bytecount == 3) spi_addr[15:8] = buffer;
+
+        if (bytecount == 4) spi_addr[7:0] = buffer;
+
+        if (bytecount > 4) begin
+          if (wren)
+          begin
+            if (spi_addr + bytecount-5 < flash_size)
+                memory[spi_addr+bytecount-5] = buffer;
+            busycount = 0;
+            $display("FLASH write 0x%04X=0x%02X", spi_addr+bytecount-5, buffer);
+          end
+        end
+      end
+
       spi_out = buffer;
       spi_io_vld = 1;
 
@@ -258,6 +315,8 @@ module spiflash #(
         $display("");
         $fflush;
       end
+      if (spi_cmd == 8'hd8 || spi_cmd == 8'h02)
+         wren = 0;
       buffer = 0;
       bitcount = 0;
       bytecount = 0;

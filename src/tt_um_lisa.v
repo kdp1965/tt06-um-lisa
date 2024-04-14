@@ -257,6 +257,7 @@ module tt_um_lisa
    wire [7:0]           dummy_read_cycles;
    wire [3:0]           spi_clk_div;
    wire [6:0]           spi_ce_delay;
+   wire [1:0]           spi_mode;
 
    // ==========================================================================
    // The QSPI I/O signals
@@ -559,6 +560,7 @@ module tt_um_lisa
       .quad_mode           ( quad_mode          ),
       .spi_clk_div         ( spi_clk_div        ),
       .spi_ce_delay        ( spi_ce_delay       ),
+      .spi_mode            ( spi_mode           ),
      
       // The QSPI Pin interface
       .sclk                ( sclk               ),
@@ -661,6 +663,7 @@ module tt_um_lisa
       .plus_guard_time     ( plus_guard_time    ),
       .spi_clk_div         ( spi_clk_div        ),
       .spi_ce_delay        ( spi_ce_delay       ),
+      .spi_mode            ( spi_mode           ),
 
       // I/O Mux Bits
       .output_mux_bits     ( output_mux_bits    ),

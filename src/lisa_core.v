@@ -46,8 +46,8 @@ Uses a 14 (or 16) bit program word.  Shown is the 14-bit version.  For 16-bit, e
     10 0010 111xxxxx   rz                   If z==1, pc <= stack
     10 0010 10100000   call ix              Call ix, ix <= ix + 1 (used for printf, etc.)
     10 0010 10101000   jmp ix               Jump to ix
-    10 0010 10110000   xchg ra              Swap ix with sp
-    10 0010 10110010   xchg sp              Swap ix with ra
+    10 0010 10110000   xchg ra              Swap ix with ra
+    10 0010 10110010   xchg sp              Swap ix with sp
     10 0010 10110011   spix                 ix <= sp
     10 0010 10110100   cpx  ra              Compare ix and ra
     10 0010 10110110   cpx  sp              Compare ix and sp
@@ -470,7 +470,7 @@ module lisa_core
    assign d_ok       = d_ready || !d_valid;
    assign d_we       = dbg_d_access ? dbg_d_we : (stop && dbg_a == 8'h6) ? dbg_we : d_we_r;
    assign d_periph   = ((op_sta | op_lda | op_swapi) & inst[9] & !dbg_d_access) | dbg_d_periph;
-   assign d_valid_rd = op_mul | op_mulu | 
+   assign d_valid_rd = op_mul | op_mulu | op_pop_ix |
                        op_adc | op_dcx | op_shl16 | op_shr16 | op_pop_a |
                        op_lddiv | op_lra | op_add | op_sub | op_cmp | op_dcx | op_inx |
                        op_ldxx | op_and | op_or | (op_swapi & !inst[9] & !dbg_d_access) | op_xor | op_swap |
@@ -1463,6 +1463,8 @@ module lisa_core
       if (op_restc)                                ascii_instr = "restc";
       if (op_ldz)                                  ascii_instr = "ldz";
       if (op_brk)                                  ascii_instr = "brk";
+      if (op_push_ix)                              ascii_instr = "push_ix";
+      if (op_pop_ix)                               ascii_instr = "pop_ix";
       if (inst[`PWORD_SIZE-1 -: 11] == 11'h50E)    ascii_instr = "ldac";
       if (inst[`PWORD_SIZE-1] == 0)                ascii_instr = "jal";
       if (inst[`PWORD_SIZE-1 -: 6] == 6'h20)       ascii_instr = "ldi";

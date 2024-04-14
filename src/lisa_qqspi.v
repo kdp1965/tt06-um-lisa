@@ -60,6 +60,7 @@ module lisa_qqspi
    
    output reg [3:0]                 sio_oe,
    input wire [CHIP_SELECTS -1:0]   ce_ctrl,
+   input wire [CHIP_SELECTS -1:0]   spi_mode,
    output reg [CHIP_SELECTS -1:0]   ce,
    input wire [CHIP_SELECTS*4-1:0]  dummy_read_cycles,
    input wire [3:0]                 spi_clk_div,
@@ -115,6 +116,7 @@ module lisa_qqspi
    wire [7:0]                 custom_cmd_val;
    wire                       custom_cmd_addr;
    wire                       custom_cmd_read;
+   wire                       spi_mode1;
    reg  [3:0]                 clk_div_r;
    reg  [3:0]                 clk_div_next;
    reg  [6:0]                 ce_delay_r;
@@ -126,6 +128,7 @@ module lisa_qqspi
    assign addr_16b_c = |(ce_ctrl & addr_16b);
    assign is_flash_c = |(ce_ctrl & is_flash);
    assign quad_mode_c = |(ce_ctrl & quad_mode);
+   assign spi_mode1   = |(ce_ctrl & spi_mode );
    assign custom_cmd_val = write ? wdata[7:0] : cmd_quad_write;
    assign custom_cmd_addr = wdata[8];
    assign custom_cmd_read = custom_spi_cmd && !write;
@@ -233,6 +236,11 @@ module lisa_qqspi
             begin
                sclk_next = 1'b0;
                clk_div_next = spi_clk_div;
+               if (spi_mode1)
+               begin
+                  spi_buf_next = is_quad ? {spi_buf[19:0], sio_in[3:0]} : {spi_buf[22:0], sio_in[1]};
+                  xfer_cycles_next = is_quad ? xfer_cycles - 4 : xfer_cycles - 1;
+               end
             end
             else
                clk_div_next = clk_div_r - 4'h1;
@@ -241,8 +249,11 @@ module lisa_qqspi
             begin
                clk_div_next = spi_clk_div;
                sclk_next = 1'b1;
-               spi_buf_next = is_quad ? {spi_buf[19:0], sio_in[3:0]} : {spi_buf[22:0], sio_in[1]};
-               xfer_cycles_next = is_quad ? xfer_cycles - 4 : xfer_cycles - 1;
+               if (!spi_mode1)
+               begin
+                  spi_buf_next = is_quad ? {spi_buf[19:0], sio_in[3:0]} : {spi_buf[22:0], sio_in[1]};
+                  xfer_cycles_next = is_quad ? xfer_cycles - 4 : xfer_cycles - 1;
+               end
             end
             else
                clk_div_next = clk_div_r - 4'h1;

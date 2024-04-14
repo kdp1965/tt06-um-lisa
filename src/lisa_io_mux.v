@@ -229,9 +229,11 @@ module lisa_io_mux
    assign uio_out[7:6] = s_uio_out[7:6];
 
    // Assign uio_oe signals
-   assign uio_oe[4:0] = s_uio_oe[4:0];
+   assign uio_oe[3:0] = s_uio_oe[3:0];
+   assign uio_oe[4]   = rx_sel == 2'h3 ? 1'b0 : s_uio_oe[4];
    assign uio_oe[5]   = (rx_sel == 2'h2 || rx_sel == 2'h3) ? 1'b1 : s_uio_oe[5];
-   assign uio_oe[7:6] = s_uio_oe[7:6];
+   assign uio_oe[6]   = rx_sel == 2'h2 ? 1'b0 : s_uio_oe[6];
+   assign uio_oe[7]   = s_uio_oe[7];
 
    // Assign uio_out data
 

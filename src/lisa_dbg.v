@@ -102,6 +102,7 @@ module lisa_dbg
    reg  [PC_BITS:0]  brk_r0;
    reg  [PC_BITS:0]  brk_r1;
    reg  [PC_BITS:0]  brk_r2;
+   reg  [PC_BITS:0]  brk_r3;
    reg               brk_halt;
    reg               d_access_r;
    reg               d_active_r;
@@ -135,6 +136,7 @@ module lisa_dbg
          brk_r0 <= 16'h0;
          brk_r1 <= 16'h0;
          brk_r2 <= 16'h0;
+         brk_r3 <= 16'h0;
       end
       else
       begin
@@ -171,6 +173,8 @@ module lisa_dbg
                brk_r1 <= dbg_di[PC_BITS:0];
             if (dbg_a[2:0] == 3'h2)
                brk_r2 <= dbg_di[PC_BITS:0];
+            if (dbg_a[2:0] == 3'h3)
+               brk_r3 <= dbg_di[PC_BITS:0];
 
 //            for (i = 0; i < DBG_BRKPOINTS; i++)
 //            begin : GEN_BRK
@@ -232,6 +236,7 @@ module lisa_dbg
    assign brk_r[0] = brk_r0;
    assign brk_r[1] = brk_r1;
    assign brk_r[2] = brk_r2;
+   assign brk_r[3] = brk_r3;
    always @*
    begin
       brk_halt = 1'b0;

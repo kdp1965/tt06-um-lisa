@@ -1,29 +1,39 @@
 ## How it works
+                                 
+This is a Microprocessor build around an 8-Bit Little ISA (LISA) processor.
+The following is a block diagram of the project:
+                                           
+                                +------+    
+                         +----->|config|   
+                         |      | regs |   
+               |\   +----+----+ +------+  +------+   +------+ 
+    rx1 -----*-| |  |         |           | lisa |   | lisa |
+             | | |  |  Debug  |           | qspi |   | qqspi| QSPI
+    rx2 ---*-|-| +->|  Intf   +---------->|      +<->|      +----> 
+           | | | |  |         |           | QSPI |   | QPSI | CEs
+    rx3 -*-|-|-| |  |         +-------+   | ARB  |   | Ctrl +----> 
+         | | | |/   +---------+  Ctrl |   +--+---+   +------+
+         | | |  |                     |      |                  
+         | | |  |Port                 V      |       +--------+       
+         V V V  |Sel                +-+------+---+   | lisa   |       
+      +---------+-+   +--------+    |            +---+ debug  |       
+      |  debug    |   | HW Int |    |    LISA    |   +--------+       
+      | autobaud  |   |  Mul/  |<-->|    CORE    |   +--------+       
+      |           |   |  Div   |    |            +---+ Periph |    
+      +-----------+   +--------+    +-+-------+--+   |        |    
+                                      |       |      |    gpio+--> 
+                    +-------+   +-----+-+ +---+---+  |     i2c+--> 
+                    | RAM32 +---+ DATA  | | INST  |  |    UART+-> 
+                    | 128B  |   | CACHE | | CACHE |  | timer  |  
+                    +-------+   +-------+ +-------+  +--------+  
 
-This is an 8-Bit Little ISA (LISA) processor.  It includes the following:
-
-                                       
-               |\   +---------+          +------+   +------+ 
-    rx1 -----*-| |  |         |          | lisa |   | lisa |
-             | | |  |  Debug  +--------->| qspi |   | qqspi| QSPI
-    rx2 ---*-|-| +->|  Intf   |          |      +<->|      +----> 
-           | | | |  |         |          | QSPI |   | QPSI |
-    rx3 -*-|-|-| |  |         +-+        | ARB  |   | Ctrl |
-         | | | |/   +---------+ |        +------+   +------+
-         | | |  |        ^      |           ^                  
-         | | |  |Port    |      |           |       +--------+       
-         v v v  |Sel     v      |  +--------+---+   | lisa   |       
-      +---------+-+  +-------+  +->|            +---+ debug  |       
-      |  debug    |  | debug |     |    LISA    |   +--------+       
-      | autobaud  |  |  regs |     |    CORE    |   +--------+       
-      |           |  |       |     |            +---+ Periph |    
-      +-----------+  +-------+     +-+-------+--+   |        |    
-                                     |       |      |    gpio+--> 
-                   +-------+   +-----+-+ +---+---+  |     i2c+--> 
-                   | RAM32 +---+ DATA  | | INST  |  |    UART+-> 
-                   | 128B  |   | CACHE | | CACHE |  | timer  |  
-                   +-------+   +-------+ +-------+  +--------+  
-                                                               
+   - The LISA Core as a minimal set of register that allow it to run "C" programs:
+      - Program Counter
+      - Stack Pointer
+      - Index Register
+      - Return Address Register
+      - Accumulator
+       
    - Harvard architecture LISA Core (16-bit instruction, 15-bit address space)
    - Debug interface
       * UART controlled

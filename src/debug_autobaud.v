@@ -70,7 +70,7 @@ module debug_autobaud
          s_pulse_width  <= 14'h0;
          s_last_rx1     <= 1'b0;
          s_last_rx2     <= 1'b0;
-         s_last_rx2     <= 1'b0;
+         s_last_rx3     <= 1'b0;
          rx_sel         <= 2'h0;
          s_rx_sel       <= 2'h0;
          s_done         <= 1'b0;

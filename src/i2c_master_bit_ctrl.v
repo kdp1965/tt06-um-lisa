@@ -371,11 +371,11 @@ module i2c_master_bit_ctrl
           cmd_ack   <= 1'b0; // default no command acknowledge + assert cmd_ack only 1clk cycle
 
           if (clk_en)
-              case (c_state) // synopsys full_case parallel_case
+              case (c_state)
                     // idle state
                     idle:
                     begin
-                        case (cmd) // synopsys full_case parallel_case
+                        case (cmd)
                              `I2C_CMD_START: c_state <= start_a;
                              `I2C_CMD_STOP:  c_state <= stop_a;
                              `I2C_CMD_WRITE: c_state <= wr_a;

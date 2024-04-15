@@ -101,6 +101,7 @@ module lisa_dbg
    wire [PC_BITS:0]  brk_r[DBG_BRKPOINTS-1:0];
    reg  [PC_BITS:0]  brk_r0;
    reg  [PC_BITS:0]  brk_r1;
+   reg  [PC_BITS:0]  brk_r2;
    reg               brk_halt;
    reg               d_access_r;
    reg               d_active_r;
@@ -133,6 +134,7 @@ module lisa_dbg
 //            brk_r[i] <= {(PC_BITS+1){1'b0}};
          brk_r0 <= 16'h0;
          brk_r1 <= 16'h0;
+         brk_r2 <= 16'h0;
       end
       else
       begin
@@ -167,6 +169,8 @@ module lisa_dbg
                brk_r0 <= dbg_di[PC_BITS:0];
             if (dbg_a[2:0] == 3'h1)
                brk_r1 <= dbg_di[PC_BITS:0];
+            if (dbg_a[2:0] == 3'h2)
+               brk_r2 <= dbg_di[PC_BITS:0];
 
 //            for (i = 0; i < DBG_BRKPOINTS; i++)
 //            begin : GEN_BRK
@@ -227,6 +231,7 @@ module lisa_dbg
    */
    assign brk_r[0] = brk_r0;
    assign brk_r[1] = brk_r1;
+   assign brk_r[2] = brk_r2;
    always @*
    begin
       brk_halt = 1'b0;
@@ -258,11 +263,11 @@ module lisa_dbg
          4:    dbg_do = { {(16-PC_BITS){1'b0}}, ra };
          5:    dbg_do = { {(16-PC_BITS){1'b0}}, ix };
          6:    dbg_do = { 8'h0, d_i };
-         7:    dbg_do = { {(16-D_BITS){1'b0}}, d_addr_r };
+         7:    dbg_do = d_addr_r;
          15:   dbg_do = inst;
          default:
             if (dbg_a[3])
-               dbg_do = { {(16-D_BITS){1'b0}}, brk_r[dbg_a[2:0]]};
+               dbg_do = brk_r[dbg_a[1:0]];
          endcase
       end
    end

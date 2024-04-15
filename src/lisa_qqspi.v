@@ -91,7 +91,7 @@ module lisa_qqspi
    wire                       read;
    reg  [3:0]                 state, next_state;
    reg  [23:0]                spi_buf;
-   reg  [5:0]                 xfer_cycles;
+   reg  [4:0]                 xfer_cycles;
    reg                        is_quad;
    reg  [15:0]                rdata_next;
    reg                        sclk_next;
@@ -99,7 +99,7 @@ module lisa_qqspi
    reg  [3:0]                 sio_out_next;
    reg  [23:0]                spi_buf_next;
    reg                        is_quad_next;
-   reg  [5:0]                 xfer_cycles_next;
+   reg  [4:0]                 xfer_cycles_next;
    reg                        ready_next;
    reg                        xfer_done_next;
    reg  [CHIP_SELECTS -1:0]   ce_next;
@@ -282,7 +282,7 @@ module lisa_qqspi
                begin
                   ce_next        = ~ce_ctrl;
                   next_state     = S2_CMD;
-                  len_count_next = {1'b0, xfer_len};
+                  len_count_next = xfer_len;
                end
             end
           
@@ -321,7 +321,7 @@ module lisa_qqspi
           
             S5_WAIT: begin
                sio_oe_next = 4'b0000;
-               xfer_cycles_next = dummy_cycles;
+               xfer_cycles_next = {1'h0, dummy_cycles};
                is_quad_next = 0;
                next_state = S6_XFER;
             end

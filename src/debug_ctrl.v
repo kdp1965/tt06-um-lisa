@@ -54,6 +54,7 @@ module debug_ctrl
 (
    input  wire                clk,
    input  wire                rst_n,
+   input  wire                rst_async_n,
 
    // Debug UART signals
    input  wire                debug_rx,
@@ -272,9 +273,9 @@ module debug_ctrl
    // ===================================================================
    // State machine update process
    // ===================================================================
-   always @(posedge clk or negedge rst_n)
+   always @(posedge clk or negedge rst_async_n)
    begin
-      if (~rst_n)
+      if (~rst_async_n)
       begin
          s_state             <= st_reset;
          s_rx_rd             <= 1'b0;
@@ -287,7 +288,7 @@ module debug_ctrl
          s_lisa_rx_avail     <= 1'b0;
          s_last_debug_halted <= 1'b1;
          s_tx_d              <= 8'h0;
-         s_t_len             <= 8'h0;
+         s_t_len             <= 3'h0;
       end
       else
       begin
@@ -415,7 +416,7 @@ module debug_ctrl
 
                   default:
                   begin
-                     s_debug_arg  <= 20'h0;
+                     s_debug_arg  <= 24'h0;
                      s_state      <= st_flush;
                   end
                endcase
@@ -639,9 +640,9 @@ module debug_ctrl
    // ===================================================================
    // Reset state counter
    // ===================================================================
-   always @(posedge clk or negedge rst_n)
+   always @(posedge clk or negedge rst_async_n)
    begin
-      if (~rst_n)
+      if (~rst_async_n)
          s_reset_count <= 0;
       else
       begin
@@ -698,9 +699,9 @@ module debug_ctrl
    // ===================================================================
    // UART sharing guard timer
    // ===================================================================
-   always @(posedge clk or negedge rst_n)
+   always @(posedge clk or negedge rst_async_n)
    begin
-      if (~rst_n)
+      if (~rst_async_n)
       begin
          s_guard_count   <= 24'h0;
          s_lisa_has_uart <= 1'b0;

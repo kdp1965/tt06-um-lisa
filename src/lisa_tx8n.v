@@ -147,7 +147,7 @@ module lisa_tx8n
             IDLE:
                begin
                   zero_clock <= 1'b1;
-                  bit_count <= 8'h0;
+                  bit_count <= 3'h0;
 
                   // Wait for data in the data buffer
                   if (s_latch_be == 0)

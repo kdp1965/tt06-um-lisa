@@ -27,7 +27,6 @@ SUCH DAMAGE.
 
 ==============================================================================
 */
-`timescale 1 ns / 1 ps
 
 `define XPR_LEN            16
 `define DOUBLE_XPR_LEN     32
@@ -85,7 +84,6 @@ module lisa_div
    localparam [1:0] s_done = 3;
 
    reg [md_state_width-1:0]      state;
-   reg [md_state_width-1:0]      next_state;
    reg                           negate_output;
    wire [`XPR_LEN-1:0]           a;
    reg [`XPR_LEN-1:0]            b;
@@ -101,8 +99,8 @@ module lisa_div
    wire                          sign_in_2;
 
    wire                          a_gt;
-   wire [`DOUBLE_XPR_LEN-1:0]    result_muxed;
-   wire [`DOUBLE_XPR_LEN-1:0]    result_muxed_negated;
+   wire [`XPR_LEN-1:0]           result_muxed;
+   wire [`XPR_LEN-1:0]           result_muxed_negated;
    wire [`XPR_LEN-1:0]           final_result;
    wire                          div_finish;
 
@@ -134,7 +132,7 @@ module lisa_div
    assign a_gt = a >  b;
    assign result_muxed = op_any_rem ? b : result;
    assign result_muxed_negated = (negate_output) ? -result_muxed : result_muxed;
-   assign final_result = result_muxed_negated[0+:`XPR_LEN];
+   assign final_result = result_muxed_negated;
 
    assign div_ready = div_finish;
    assign a = abs_in_1;

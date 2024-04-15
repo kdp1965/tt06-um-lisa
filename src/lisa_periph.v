@@ -28,6 +28,8 @@ SUCH DAMAGE.
 ==============================================================================
 */
 
+`define TIMER2
+
 /*
 ==========================================================================================
 lisa_periph:   A peripheral controller for the lisa core.
@@ -87,7 +89,6 @@ module lisa_periph
    // GPIO
    output reg [7:0]     porta,
    input  wire [7:0]    porta_in,
-   output reg [7:0]     porta_dir,
    output reg [3:0]     portb,
    input  wire [3:0]    portb_in,
    output reg [3:0]     portb_dir,
@@ -116,6 +117,18 @@ module lisa_periph
    reg   [7:0]          ms_tick;
    reg                  ms_enable;
    reg                  ms_rollover;
+
+`ifdef TIMER2
+   reg   [15:0]         ms2_count;
+   reg   [15:0]         ms2_prediv;
+   reg   [15:0]         ms2_preload;
+   reg   [15:0]         ms2_timer;
+   reg   [7:0]          ms2_tick;
+   reg                  ms2_enable;
+   reg                  ms2_rollover;
+`endif
+
+   reg   [7:0]          porta_dir;
    wire  [7:0]          porta_read;
    wire  [3:0]          portb_read;
    reg   [7:0]          d_o_r;
@@ -136,6 +149,15 @@ module lisa_periph
          ms_tick     <= 8'h0;
          ms_enable   <= 1'h0;
          ms_rollover <= 1'b0;
+`ifdef TIMER2
+         ms2_prediv   <= 16'd29494;
+         ms2_count    <= 16'h0;
+         ms2_timer    <= 16'h0;
+         ms2_preload  <= 16'h0;
+         ms2_tick     <= 8'h0;
+         ms2_enable   <= 1'h0;
+         ms2_rollover <= 1'b0;
+`endif
       end
       else
       begin
@@ -182,12 +204,12 @@ module lisa_periph
             ms_preload[15:8] <= d_i;
 
          // The ms_rollover bit
-         if (ms_count == ms_prediv && ms_timer == 8'h01)
-            ms_rollover <= 1'b1;
-         else if (d_periph && 
+         if (d_periph && 
                 ((d_rd && d_addr == 7'h0C) ||
                  (d_we && d_addr == 7'h0D)))
             ms_rollover <= 1'b0;
+         else if (ms_count == ms_prediv && ms_timer == 16'h01)
+            ms_rollover <= 1'b1;
 
          // Loading tick value also resets 1ms timimg
          if (d_periph && d_we && d_addr == 7'h0D)
@@ -206,7 +228,7 @@ module lisa_periph
                ms_count <= 16'h0; 
             
                // Count down to 1 then increment tick and load the preload
-               if (ms_timer == 8'h01)
+               if (ms_timer == 16'h01)
                begin
                   ms_tick <= ms_tick + 1;
                   ms_timer <= ms_preload;
@@ -223,6 +245,74 @@ module lisa_periph
             ms_timer <= ms_preload;
             ms_count <= 16'h0; 
          end
+
+`ifdef TIMER2
+         // ==============================================
+         // Timer2 signals
+         // ==============================================
+         // The control signal
+         if (d_periph && d_we && d_addr == 7'h1C)
+            ms2_enable <= d_i[0];
+
+         // The pre divider
+         if (d_periph && d_we && d_addr == 7'h18)
+            ms2_prediv[7:0] <= d_i;
+
+         // The pre divider
+         if (d_periph && d_we && d_addr == 7'h19)
+            ms2_prediv[15:8] <= d_i;
+
+         // The preload
+         if (d_periph && d_we && d_addr == 7'h1A)
+            ms2_preload[7:0] <= d_i;
+
+         // The preload
+         if (d_periph && d_we && d_addr == 7'h1B)
+            ms2_preload[15:8] <= d_i;
+
+         // The ms2_rollover bit
+         if (d_periph && 
+                ((d_rd && d_addr == 7'h1C) ||
+                 (d_we && d_addr == 7'h1D)))
+            ms2_rollover <= 1'b0;
+         else if (ms2_count == ms2_prediv && ms2_timer == 16'h01)
+            ms2_rollover <= 1'b1;
+
+         // Loading tick value also resets 1ms timimg
+         if (d_periph && d_we && d_addr == 7'h1D)
+         begin
+            ms2_tick <= d_i;
+            ms2_timer <= ms2_preload;
+            ms2_count <= 16'h0; 
+         end
+
+         // Test if timer is enabled
+         else if (ms2_enable)
+         begin
+            // Implement a 1ms tick
+            if (ms2_count == ms2_prediv)
+            begin
+               ms2_count <= 16'h0; 
+            
+               // Count down to 1 then increment tick and load the preload
+               if (ms2_timer == 16'h01)
+               begin
+                  ms2_tick <= ms2_tick + 1;
+                  ms2_timer <= ms2_preload;
+               end
+               else
+                  ms2_timer <= ms2_timer - 1;
+            end
+            else
+               ms2_count <= ms2_count + 16'h1;
+         end
+         else
+         begin
+            ms2_tick <= 8'h0;
+            ms2_timer <= ms2_preload;
+            ms2_count <= 16'h0; 
+         end
+`endif
       end
    end
 
@@ -245,24 +335,34 @@ module lisa_periph
    begin
       case (d_addr)
       // GPIO readback
-      7'h00:   d_o_r <= porta_read;
-      7'h01:   d_o_r <= porta_dir;
-      7'h02:   d_o_r <= {4'h0, portb_read};
-      7'h03:   d_o_r <= {4'h0, portb_dir};
+      7'h00:   d_o_r = porta_read;
+      7'h01:   d_o_r = porta_dir;
+      7'h02:   d_o_r = {4'h0, portb_read};
+      7'h03:   d_o_r = {4'h0, portb_dir};
 
       // Timer readback
-      7'h08:   d_o_r <= ms_prediv[7:0];
-      7'h09:   d_o_r <= ms_prediv[15:8];
-      7'h0A:   d_o_r <= ms_preload[7:0];
-      7'h0B:   d_o_r <= ms_preload[15:8];
-      7'h0C:   d_o_r <= { ms_rollover, 6'h0, ms_enable};
-      7'h0D:   d_o_r <= ms_tick;
+      7'h08:   d_o_r = ms_prediv[7:0];
+      7'h09:   d_o_r = ms_prediv[15:8];
+      7'h0A:   d_o_r = ms_preload[7:0];
+      7'h0B:   d_o_r = ms_preload[15:8];
+      7'h0C:   d_o_r = { ms_rollover, 6'h0, ms_enable};
+      7'h0D:   d_o_r = ms_tick;
 
       // UART read
-      7'h10:   d_o_r <= uart_rx_d;
-      7'h11:   d_o_r <= {6'h0, uart_tx_buf_empty, uart_rx_data_avail};
+      7'h10:   d_o_r = uart_rx_d;
+      7'h11:   d_o_r = {6'h0, uart_tx_buf_empty, uart_rx_data_avail};
 
-      default: d_o_r <= 8'h00;
+      // Timer2 readback
+`ifdef TIMER2
+      7'h18:   d_o_r = ms2_prediv[7:0];
+      7'h19:   d_o_r = ms2_prediv[15:8];
+      7'h1A:   d_o_r = ms2_preload[7:0];
+      7'h1B:   d_o_r = ms2_preload[15:8];
+      7'h1C:   d_o_r = { ms2_rollover, 6'h0, ms2_enable};
+      7'h1D:   d_o_r = ms2_tick;
+`endif
+
+      default: d_o_r = 8'h00;
       endcase
    end
 
@@ -284,7 +384,6 @@ module lisa_periph
       .d_i          ( d_i          ),
       .d_periph     ( d_periph     ),
       .d_we         ( d_we         ),
-      .d_rd         ( d_rd         ),
       .d_o          ( i2c_d_o      ),
       .scl_pad_i    ( scl_pad_i    ),
       .scl_pad_o    ( scl_pad_o    ),

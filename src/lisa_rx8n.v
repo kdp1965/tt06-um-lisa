@@ -52,7 +52,6 @@ module lisa_rx8n
    reg  [7:0]        dbuf;                      // Data buffer
    reg               buffer_full;               // True when data in buffer
 
-   reg               s_rd;                      // Read signal
    reg               s_last_rd;                 // Previous read signal
    reg               s_rxd;                     // 
 

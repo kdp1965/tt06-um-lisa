@@ -132,12 +132,11 @@ module inst_cache
    // ==========================================================================
    // Generate valid and dirty bits
    // ==========================================================================
-   integer i;
    always @(posedge clk)
    begin
       if (~rst_n)
       begin
-         cl_valid <= 4'h0;
+         cl_valid <= 1'b0;
          cl_addr0 <= 15'h0;
          cl_addr1 <= 15'h0;
          cl_addr2 <= 15'h0;
@@ -203,8 +202,8 @@ module inst_cache
       cl_update        = 1'b0;
       qspi_valid       = 1'b0;
       qspi_ready_ack   = 1'b1;
-      cl_clear_valid   = 4'h0;
-      cl_set_valid     = 4'h0;
+      cl_clear_valid   = 1'b0;
+      cl_set_valid     = 1'b0;
 
       case (state)
          ST_IDLE:

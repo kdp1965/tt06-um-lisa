@@ -91,6 +91,7 @@ module tt_um_lisa
    wire                 baud_ref;
 
    reg  [2:0]           rst_n_r;
+   reg  [2:0]           rst_async_n_r;
 
    // ==========================================================================
    // I/O mux control signals
@@ -150,7 +151,6 @@ module tt_um_lisa
    // ==========================================================================
    wire    [7:0]        porta;
    wire    [7:0]        porta_in;   
-   wire    [7:0]        porta_dir;
    wire    [3:0]        portb;
    wire    [3:0]        portb_in;
    wire    [3:0]        portb_dir;
@@ -193,7 +193,6 @@ module tt_um_lisa
    wire [1:0]           debug_wstrb;         // Which bytes in the 32-bits to write
    wire                 debug_ready;         // Next 32-bit value is ready
    wire                 debug_ready_ack;     // Next 32-bit value is ready
-   wire                 debug_xfer_done;     // Total xfer_len transfer is done
    wire                 debug_valid;         // Indicates a valid request 
    wire [3:0]           debug_xfer_len;      // Number of 32-bit words to transfer
    wire [1:0]           debug_ce_ctrl;
@@ -280,9 +279,15 @@ module tt_um_lisa
    always @(posedge clk or negedge rst_n)
    begin
       if (~rst_n)
+      begin
          rst_n_r <= 3'h0;
+         rst_async_n_r <= 3'h0;
+      end
       else
+      begin
          rst_n_r <= {rst_n_r[1:0], 1'b1};
+         rst_async_n_r <= {rst_async_n_r[1:0], 1'b1};
+      end
    end
    
    // ==========================================================================
@@ -292,6 +297,7 @@ module tt_um_lisa
    (
       .clk                 ( clk                ),
       .rst_n               ( rst_n_r[2]         ),
+      .rst_async_n         ( rst_async_n_r[2]   ),
       .reset               ( dbg_reset          ),
                                              
       // Instruction bus                     
@@ -365,7 +371,6 @@ module tt_um_lisa
       .d_o                 ( d_i_cache            ),
       .d_valid             ( d_valid              ),
       .d_we                ( d_we                 ),
-      .d_rd                ( d_rd                 ),
       .d_periph            ( d_periph             ),
       .d_ready             ( d_ready              ),
 
@@ -442,7 +447,6 @@ module tt_um_lisa
       // GPIO signals                           
       .porta               ( porta              ),
       .porta_in            ( porta_in           ),
-      .porta_dir           ( porta_dir          ),
       .portb               ( portb              ),
       .portb_in            ( portb_in           ),
       .portb_dir           ( portb_dir          ),
@@ -479,7 +483,6 @@ module tt_um_lisa
       .debug_wstrb         ( debug_wstrb        ), // Which bytes in the 32-bits to write
       .debug_ready         ( debug_ready        ), // Next 32-bit value is ready
       .debug_ready_ack     ( debug_ready_ack    ), // Indicates a valid request
-      .debug_xfer_done     ( debug_xfer_done    ), // Total xfer_len transfer is done
       .debug_valid         ( debug_valid        ), // Indicates a valid request
       .debug_xfer_len      ( debug_xfer_len     ), // Number of 32-bit words to transfer
       .debug_ce_ctrl       ( debug_ce_ctrl      ),
@@ -586,6 +589,7 @@ module tt_um_lisa
    (
       .clk                 ( clk                ),
       .rst_n               ( rst_n_r[2]         ),
+      .rst_async_n         ( rst_async_n_r[2]   ),
                                                 
       // UART signals                           
       .debug_rx            ( debug_rx           ),
@@ -641,7 +645,6 @@ module tt_um_lisa
       .debug_wdata         ( debug_wdata        ), // Data to write
       .debug_wstrb         ( debug_wstrb        ), // Which bytes in the 32-bits to write
       .debug_ready         ( debug_ready        ), // Next 32-bit value is ready
-      .debug_xfer_done     ( debug_xfer_done    ), // Total xfer_len transfer is done
       .debug_valid         ( debug_valid        ), // Indicates a valid request
       .debug_xfer_len      ( debug_xfer_len     ), // Number of 16-bit words to transfer
       .debug_ce_ctrl       ( debug_ce_ctrl      ),
@@ -712,6 +715,7 @@ module tt_um_lisa
    (
       .clk                 ( clk                ),
       .rst_n               ( rst_n_r[2]         ),
+      .ena                 ( ena                ),
 
       // Chip top I/O signals
       .ui_in               ( ui_in              ),

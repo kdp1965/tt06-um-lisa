@@ -3,7 +3,7 @@ project:
   title:        "LISA SOC (128 bytes)"
   author:       "Ken Pettit"
   discord:      "busy_courgette_50064"
-  description:  "8-Bit Processor SOC with 128 bytes DFFRAM module"
+  description:  "8-Bit Microcontroller SOC with 128 bytes DFFRAM module"
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     20000000       # Clock frequency in Hz (or 0 if not applicable)
 
@@ -39,34 +39,34 @@ project:
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:
   # Inputs
-  ui[0]: "porta_in[0]"
-  ui[1]: "porta_in[1]"
-  ui[2]: "porta_in[2]"
-  ui[3]: "porta_in[3]/debug_rx"
-  ui[4]: "porta_in[4]"
-  ui[5]: "porta_in[5]"
-  ui[6]: "porta_in[6]"
-  ui[7]: "porta_in[7]"
+  ui[0]: "pa_in[0] / baud_div[0]"
+  ui[1]: "pa_in[1] / baud_div[1]"
+  ui[2]: "pa_in[2] / baud_div[2]"
+  ui[3]: "pa_in[3] / rx / baud_div[3]"
+  ui[4]: "pa_in[4] / baud_div[4]"
+  ui[5]: "pa_in[5] / baud_div[5]"
+  ui[6]: "pa_in[6] / baud_div[6]"
+  ui[7]: "pa_in[7] / baud_set"
 
   # Outputs
-  uo[0]: "porta_out[0]"
-  uo[1]: "porta_out[1]"
-  uo[2]: "porta_out[2]"
-  uo[3]: "porta_out[3]"
-  uo[4]: "porta_out[4]/debug_tx"
-  uo[5]: "porta_out[5]"
-  uo[6]: "porta_out[6]"
-  uo[7]: "porta_out[7]"
+  uo[0]: "pa_out[0]"
+  uo[1]: "pa_out[1]"
+  uo[2]: "pa_out[2]"
+  uo[3]: "pa_out[3]"
+  uo[4]: "pa_out[4] / tx"
+  uo[5]: "pa_out[5]"
+  uo[6]: "pa_out[6]"
+  uo[7]: "pa_out[7] / baud_clk"
 
   # Bidirectional pins
-  uio[0]: "spi_cs"
-  uio[1]: "spi_mosi"
-  uio[2]: "spi_miso"
-  uio[3]: "spi_sclk"
-  uio[4]: "portb_io[0]/debug_rx"
-  uio[5]: "portb_io[1]/debug_tx"
-  uio[6]: "portb_io[2]/spi_dq2/debug_rx"
-  uio[7]: "portb_io[3]/spi_dq3"
+  uio[0]: "ce[0] / ce_latch"
+  uio[1]: "mosi / dq1 / ce[0]"
+  uio[2]: "miso / dq2 / ce[1]"
+  uio[3]: "sclk"
+  uio[4]: "pb_io[0] / rx / scl / sda"
+  uio[5]: "pb_io[1] / tx / sda / scl"
+  uio[6]: "scl / pb_io[2] / dq2 / rx"
+  uio[7]: "sda / pb_io[3] / dq3"
 
 # Do not change!
 yaml_version: 6

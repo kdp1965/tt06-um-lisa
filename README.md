@@ -19,12 +19,36 @@ The Debugger UART is available to the LISA processor core by sending it an 'l' c
 that, the LISA processor can send / receive data over the UART.  Issuing a "+++" command with a
 0.5s guard time before / after will connect the UART back to the debugger.
 
-Peripherals include:
+Features include:
    - UART (shared with debugger)
    - 16-Bit timer
    - GPIO (8-bit A port, 4-bit bidir B port)
    - I2C Master
    - I/O Mux to select pin functions
+   - 8x8 Hardware multiplier
+   - 16/16 (or 16/8) Hardware divider
+   - Three HW breakpoints
+   - Software breakpoints
+   - 32K (64KByte) Instruction space
+   - 32K Byte Data Space
+   - Configurable (Q)SPI chip selects
+     - Two CE outputs
+     - Programmable SCLK frequency per CE
+     - Programmable inter-CE activation timer
+     - Programmable mode (rising / falling SCLK data change)
+     - Programmable dummy read delay per CE
+     - 16 or 24 bit addressing per CE
+     - FLASH or SRAM per CE
+     - SPI or QSPI per CE
+     - Support QSPI with 2 CE lines on single custom PMOD board
+       with a QSPI FLASH, QSPI SRAM plus UART or I2C.  This 
+       is accomplished using latches on the PMOD to latch the
+       CE signal (on MISO and MOSI) at the beginning of the QSPI
+       transaction, and the SoC has an I/O mux option to support
+       this.
+     - Configurable SPI / QSPI base addresses for Debugger, 
+       LISA Instruction and LISA Data accesses.
+     - Configureable pinout
 
 The size of this project is 2x6 tiles.
 

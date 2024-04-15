@@ -67,7 +67,7 @@ module debug_autobaud
          s_bit_div1     <= 8'h0;
          s_bit_div2     <= 8'h0;
          s_bit_div3     <= 8'h0;
-         s_pulse_width  <= 15'h0;
+         s_pulse_width  <= 14'h0;
          s_last_rx1     <= 1'b0;
          s_last_rx2     <= 1'b0;
          s_last_rx2     <= 1'b0;

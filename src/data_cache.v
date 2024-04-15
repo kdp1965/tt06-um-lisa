@@ -42,7 +42,6 @@ module data_cache
    output wire [7:0]    d_o,
    input  wire          d_valid,
    input  wire          d_we,
-   input  wire          d_rd,
    input  wire          d_periph,
    output wire          d_ready,
 
@@ -154,10 +153,10 @@ module data_cache
    begin
       cache_map_bit = d_addr[14];
       case (cache_map_sel)
-         3'h3: cache_map_bit = d_addr[14];
-         3'h2: cache_map_bit = d_addr[13];
-         3'h1: cache_map_bit = d_addr[12];
-         3'h0: cache_map_bit = d_addr[11];
+         2'h3: cache_map_bit = d_addr[14];
+         2'h2: cache_map_bit = d_addr[13];
+         2'h1: cache_map_bit = d_addr[12];
+         2'h0: cache_map_bit = d_addr[11];
       endcase
    end
 
@@ -190,7 +189,7 @@ module data_cache
    assign qspi_addr[13]   = cache_map_sel == 2'h2 ? cache_map[1] : cl_map_addr[7];
    assign qspi_addr[12]   = cache_map_sel == 2'h1 ? cache_map[1] : cl_map_addr[6];
    assign qspi_addr[11]   = cache_map_sel == 2'h0 ? cache_map[1] : cl_map_addr[5];
-   assign qspi_addr[10:6] = cl_map_addr;
+   assign qspi_addr[10:6] = cl_map_addr[4:0];
    assign qspi_addr[5]    = cache_map[0];
    assign qspi_addr[4:1]  = fsm_a;
    assign qspi_addr[0]    = 1'b0;            // All 16-bit accesses
@@ -220,7 +219,7 @@ module data_cache
          for (i = 0; i < 4; i = i + 1)
          begin : GEN_DIRTY
             // Implement the cl_dirty signals
-            if (cache_valid && d_we && ~d_periph && (cache_map == i))
+            if (cache_valid && d_we && ~d_periph && (cache_map == 2'(i)))
                cl_dirty[i] <= 1'b1;
             else if (save_done[i])
                cl_dirty[i] <= 1'b0;

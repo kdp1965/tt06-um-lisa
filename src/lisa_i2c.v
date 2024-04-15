@@ -17,7 +17,6 @@ module lisa_i2c
    input  wire[7:0]     d_i,
    input  wire          d_periph,
    input  wire          d_we,
-   input  wire          d_rd,
    output reg [7:0]     d_o,
 
    input  wire          scl_pad_i,
@@ -28,15 +27,9 @@ module lisa_i2c
    output wire          sda_padoen_o
 );
 
-   //
-   // variable declarations
-   //
-
-   wire [3:0]    s_apb_addr;
-
    // registers
    reg  [15:0]   r_pre;      // clock prescale register
-   reg  [ 7:0]   r_ctrl;     // control register
+   reg  [ 0:0]   r_ctrl;     // control register
    reg  [ 7:0]   r_tx;       // transmit register
    wire [ 7:0]   s_rx;       // receive register
    reg  [ 7:0]   r_cmd;      // command register
@@ -47,7 +40,6 @@ module lisa_i2c
 
    // core enable signal
    wire s_core_en;
-   wire s_ien;
 
    // status register signals
    wire s_irxack;
@@ -92,7 +84,7 @@ module lisa_i2c
             r_pre[15:8]  <= d_i;
          
          if (we_ctrl)
-            r_ctrl <= d_i;
+            r_ctrl <= d_i[0:0];
          
          if (we_tx)
             r_tx   <= d_i;
@@ -121,7 +113,7 @@ module lisa_i2c
            `I2C_REG_CLK_PRE_MSB:
                d_o = r_pre[15:8];
            `I2C_REG_CTRL:
-               d_o = r_ctrl;
+               d_o = {7'b0, r_ctrl};
            `I2C_REG_RX:
                d_o = s_rx;
            `I2C_REG_STATUS: 
@@ -144,8 +136,7 @@ module lisa_i2c
    wire iack = r_cmd[0];
 
    // decode control register
-   assign s_core_en = r_ctrl[7];
-   assign s_ien     = r_ctrl[6];
+   assign s_core_en = r_ctrl[0];
 
    // hookup byte controller block
    i2c_master_byte_ctrl byte_controller 

@@ -51,7 +51,6 @@ module debug_regs
    output wire [15:0]         debug_wdata,         // Data to write
    output wire [1:0]          debug_wstrb,         // Which bytes in the 32-bits to write
    input  wire                debug_ready,         // Next 32-bit value is ready
-   input  wire                debug_xfer_done,     // Total xfer_len transfer is done
    output wire                debug_valid,         // Indicates a valid request 
    output wire [3:0]          debug_xfer_len,      // Number of 16-bit words to transfer
    output reg  [CHIP_SELECTS -1:0]  debug_ce_ctrl,
@@ -143,6 +142,7 @@ module debug_regs
                4'hc: io_mux_bits <= dbg_di[7:0];
                4'hd: {cache_disabled, cache_map_sel} <= dbg_di[2:0];
                4'he: {spi_mode, spi_ce_delay, spi_clk_div} <= dbg_di[12:0];
+               default: begin end
             endcase
          end
          else if (dbg_a == 8'h20 && (dbg_we || dbg_rd) && debug_ready)
@@ -172,8 +172,9 @@ module debug_regs
          4'ha: dbg_do = {12'h0, plus_guard_time};
          4'hb: dbg_do = output_mux_bits;
          4'hc: dbg_do = {8'h0, io_mux_bits};
-         4'hd: dbg_do = {5'h0, cache_disabled, cache_map_sel};
+         4'hd: dbg_do = {13'h0, cache_disabled, cache_map_sel};
          4'he: dbg_do = {3'h0, spi_mode, spi_ce_delay, spi_clk_div};
+         default dbg_do = 16'h0;
          endcase
       end
       else if (dbg_a[7:4] == 4'h2 && dbg_rd == 1'b1)
@@ -182,6 +183,7 @@ module debug_regs
          4'h0: dbg_do = debug_rdata;
          4'h1: dbg_do = debug_rdata;
          4'h2: dbg_do = debug_rdata;
+         default dbg_do = 16'h0;
          endcase
       end
    end

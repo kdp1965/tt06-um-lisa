@@ -64,7 +64,7 @@ Uses a 14 (or 16) bit program word.  Shown is the 14-bit version.  For 16-bit, e
     10 1000 0000001b   ldc   #imm1          Load cflag with b
     10 1000 000010ii   shl16                {a,temp} <<= 1
     10 1000 000011ii   shr16                {a,temp} >>= 1
-    10 1000 000001ux   txa                  Transfer IX[7:0]/IX[11:8] to A based on u
+    10 1000 000001ux   txa                  Transfer IX[7:0]/IX[14:8] to A based on u
     10 1000 000110cb   ldz                  Load zflag: Complement if C, otherwise zflag = b
     10 1000 00011100   nop
     10 1000 00011101   notz
@@ -72,13 +72,13 @@ Uses a 14 (or 16) bit program word.  Shown is the 14-bit version.  For 16-bit, e
     10 1000 00010bbb   btst  a,#b           Bit test:  c = a[#b] 
     10 1000 00100xxx   push a               Push acc (and cflag) to stack.
     10 1000 00110xxx   pop a                Pop acc (and cflag) from stack
-    10 1000 010000ux   tax                  Transfer A to IX[7:0]/IX[11:8] based on u
+    10 1000 010000ux   tax                  Transfer A to IX[7:0]/IX[14:8] based on u
     10 1000 010100mm   amode                Set arithemetc mode ([signed:shift])
     10 1000 01011000   sra                  Save Return Address
     10 1000 01011001   lra                  Load Return Address
     10 1000 01011010   push ix              Push ix to stack
     10 1000 01011011   pop ix               Pop ix from stack0
-    10 1000 01011100   lddiv                Load dividend from stack: ra[7:0]<=0(sp) ix[7:0]<=a
+    10 1000 01011100   lddiv                Load dividend from stack: ra[7:0]<=1(sp) ix[7:0]<=a
     10 1000 01011110   savec                Save cflag
     10 1000 01011111   restc                Restore cflag
     10 1000 01100000   ldx                  Load ix with data in next opcode
@@ -143,11 +143,12 @@ module lisa_core
       parameter PC_BITS        = 15,
       parameter D_BITS         = 15,       // NOTE: Up to PC_BITS
       parameter WANT_DBG       = 1,
-      parameter DBG_BRKPOINTS  = 2
+      parameter DBG_BRKPOINTS  = 3
 )
 (
    input                      clk,
    input                      rst_n,
+   input                      rst_async_n,
    input                      reset,
 
    // Address bus
@@ -210,6 +211,9 @@ module lisa_core
    reg                        delayed_sp_dec;
    wire                       ldx_stage_two;
    wire                       d_o_shr_val;
+   reg                        lddiv_stage_two;
+   reg                        div_stage_two;
+   reg                        rem_stage_two;
 
    wire                       jump_taken;
    wire                       br_taken;
@@ -241,9 +245,11 @@ module lisa_core
    reg  [7:0]                 acc_delayed_val_val;
    reg                        acc_delayed_val_load;
    reg                        acc_ld_misc;
+`ifdef SIMULATION
    wire                       op_ret;
    wire                       op_rc;
    wire                       op_rz;
+`endif
    wire                       op_adx;
    wire                       op_ldx;
    wire                       op_addax;
@@ -335,9 +341,11 @@ module lisa_core
                        (inst[`PWORD_SIZE-1 -: 9] == 9'b100010100) ||
                        (inst[`PWORD_SIZE-1 -: 9] == 9'b100010110 && cflag == 1) ||
                        (inst[`PWORD_SIZE-1 -: 9] == 9'b100010111 && zflag == 1));
+`ifdef SIMULATION
    assign op_ret      = inst[`PWORD_SIZE-1 -: 9] == 9'b100010100;
    assign op_rc       = inst[`PWORD_SIZE-1 -: 9] == 9'b100010110;
    assign op_rz       = inst[`PWORD_SIZE-1 -: 9] == 9'b100010111;
+`endif
    assign op_adx      = inst[`PWORD_SIZE-1 -: 6] == 6'b100110;
    assign op_adc      = inst[`PWORD_SIZE-1 -: 6] == 6'b100100;
    assign op_ads      = inst[`PWORD_SIZE-1 -: 6] == 6'b100101;
@@ -372,8 +380,8 @@ module lisa_core
    assign op_lddiv    = inst[`PWORD_SIZE-1 -: 14] == 14'b10_1000_0101_1100;
    assign op_savec    = inst[`PWORD_SIZE-1 -: 14] == 14'b10_1000_0101_1110;
    assign op_restc    = inst[`PWORD_SIZE-1 -: 14] == 14'b10_1000_0101_1111;
-   assign op_push_a   = inst[`PWORD_SIZE-1 -: 10] == 11'b10_1000_0010;
-   assign op_pop_a    = inst[`PWORD_SIZE-1 -: 10] == 11'b10_1000_0011;
+   assign op_push_a   = inst[`PWORD_SIZE-1 -: 10] == 10'b10_1000_0010;
+   assign op_pop_a    = inst[`PWORD_SIZE-1 -: 10] == 10'b10_1000_0011;
    assign op_mul      = WANT_MUL ? (inst[`PWORD_SIZE-1 -: 6] == 6'b110001) : 1'b0;
    assign op_mulu     = WANT_MUL ? (inst[`PWORD_SIZE-1 -: 6] == 6'b100001) : 1'b0;
    assign op_xchg_ra  = inst[`PWORD_SIZE-1 -: 14] == 14'b10001010110000;
@@ -394,31 +402,32 @@ module lisa_core
    assign op_div      = WANT_DIV ? inst[`PWORD_SIZE-1 -: 12] == 12'b10_1000_110000 : 1'b0;
    assign op_rem      = WANT_DIV ? inst[`PWORD_SIZE-1 -: 12] == 12'b10_1000_110001 : 1'b0;
    assign op_any_div  = op_div | op_rem;
-   assign op_div_start = op_any_div & exec_state & cond[0];
+   assign op_div_start = ((op_any_div & inst[0] & cond[0]) | div_stage_two | rem_stage_two) & exec_state & d_ok;
    assign div_divisor  = {inst[0] ? (amode[1] ? {8{acc[7]}} : 8'h00) : d_i, acc};
    assign div_dividend = {inst[1] ? (amode[1] ? {8{ix[7]}}  : 8'h00) : ra[7:0], ix[7:0]};
 
    assign pc_inc   = pc + {{(PC_BITS-1){1'b0}}, 1'b1};
    assign pc_rel   = pc + {{(PC_BITS-11){inst[10]}}, inst[10:0]};
    assign ix_sum   = ix + {{(PC_BITS-10){inst[9]}}, inst[9:0]};
-   assign ix_addr  = ix + {{(PC_BITS-7){1'b0}}, inst[8:0]};
-   assign sp_adder = (op_sra | op_push_a | op_push_ix) ? {D_BITS{1'b0}} :
-                     ((op_ldxx | op_stxx) & stage_two) ? {{(D_BITS-D_STCK){1'b0}}, inst[D_STCK-1:0]} :
-                     ((op_ldxx | op_stxx) & !stage_two) ? {{(D_BITS-D_STCK){1'b0}}, inst[D_STCK-1:0]}+1 :
-                     (op_shl16 | op_shr16) ? {{(D_BITS-2){1'b0}}, inst[1:0]} :
-                     (op_lra | op_pop_a | op_pop_ix | op_swap | op_any_div | op_lddiv) ?
-                                                         {{(D_BITS-1){1'b0}}, 1'b1} :
-                                                         {{(D_BITS-D_INST){inst[9]}}, inst[9:0]};
+   assign ix_addr  = ix + {{(PC_BITS-9){1'b0}}, inst[8:0]};
+   assign sp_adder = (op_sra | op_push_a | op_push_ix)     ? {D_BITS{1'b0}} :
+                     (((op_ldxx | op_stxx ) & stage_two) |
+                        lddiv_stage_two | div_stage_two  |
+                        rem_stage_two)                     ? {{(D_BITS-D_STCK){1'b0}}, inst[D_STCK-1:0]} :
+                     ((op_ldxx | op_stxx) & !stage_two)    ? {{(D_BITS-D_STCK){1'b0}}, inst[D_STCK-1:0]}+1 :
+                     (op_shl16 | op_shr16)                 ? {{(D_BITS-2){1'b0}}, inst[1:0]} :
+                     (op_lra | op_pop_a | op_pop_ix)       ? {{(D_BITS-1){1'b0}}, 1'b1} :
+                                                             {{(D_BITS-D_INST){inst[9]}}, inst[9:0]};
    assign sp_sum   = sp + sp_adder;
    assign sp_addr  = sp + {{(D_BITS-D_STCK){1'b0}}, inst[D_STCK-1:0]};
 
    always @*
    begin
       case (inst[`PWORD_SIZE-1 -: 6])
-         6'b100100:   acc_adder = inst[7:0] + cflag;     // adc
-         6'b101001:   acc_adder = ~inst[7:0] + 1;        // cpi
-         6'b110010:   acc_adder = ~(d_i + cflag) + 1;    // sub (sbb)
-         6'b111010:   acc_adder = ~d_i + 1;              // cmp
+         6'b100100:   acc_adder = inst[7:0] + {7'h0, cflag};      // adc
+         6'b101001:   acc_adder = ~inst[7:0] + 1;                 // cpi
+         6'b110010:   acc_adder = ~(d_i + {7'h0, cflag}) + 8'h1;  // sub (sbb)
+         6'b111010:   acc_adder = ~d_i + 1;                       // cmp
          default:     acc_adder = d_i;
       endcase
    end
@@ -433,7 +442,7 @@ module lisa_core
    assign d_o_shr_val = (amode[0] & cflag) | (amode[1] & d_i[7]);
 
    assign   non_acc_d_o = op_sra | op_push_ix | op_stxx | op_dcx | op_inx | op_shr16 | op_shl16 |
-                          op_any_div;
+                          op_any_div | div_stage_two | rem_stage_two;
    always @*
    begin
       if (dbg_d_access)
@@ -446,18 +455,19 @@ module lisa_core
          begin
             d_o = 8'hxx;
             case (1'b1)
-            op_sra & stage_two:        d_o = {ra_cond,ra[(PC_BITS-1):8]};
-            op_sra & ~stage_two:       d_o = ra[7:0];
-            op_push_ix & stage_two:    d_o = {ix_cond,ix[(PC_BITS-1):8]};
-            op_push_ix & ~stage_two:   d_o = ix[7:0];
-            op_stxx & ~stage_two:      d_o = {ix_cond,ix[(PC_BITS-1):8]};
-            op_stxx & stage_two:       d_o = ix[7:0];
-            op_dcx:                    d_o = d_i-8'h1;
-            op_inx:                    d_o = d_i+8'h1;
-            op_shr16:                  d_o = {d_o_shr_val, d_i[7:1]};
-            op_shl16:                  d_o = {d_i[6:0], acc[7]};
-            op_any_div:                d_o = div_result[15:8];
-            default:                   d_o = 8'hxx;
+            op_sra & stage_two:           d_o = {ra_cond,ra[(PC_BITS-1):8]};
+            op_sra & ~stage_two:          d_o = ra[7:0];
+            op_push_ix & stage_two:       d_o = {ix_cond,ix[(PC_BITS-1):8]};
+            op_push_ix & ~stage_two:      d_o = ix[7:0];
+            op_stxx & ~stage_two:         d_o = {ix_cond,ix[(PC_BITS-1):8]};
+            op_stxx & stage_two:          d_o = ix[7:0];
+            op_dcx:                       d_o = d_i-8'h1;
+            op_inx:                       d_o = d_i+8'h1;
+            op_shr16:                     d_o = {d_o_shr_val, d_i[7:1]};
+            op_shl16:                     d_o = {d_i[6:0], acc[7]};
+            op_any_div | div_stage_two |
+                  rem_stage_two :         d_o = div_result[15:8];
+            default:                      d_o = 8'hxx;
             endcase
          end
          else
@@ -470,16 +480,16 @@ module lisa_core
    assign d_ok       = d_ready || !d_valid;
    assign d_we       = dbg_d_access ? dbg_d_we : (stop && dbg_a == 8'h6) ? dbg_we : d_we_r;
    assign d_periph   = ((op_sta | op_lda | op_swapi) & inst[9] & !dbg_d_access) | dbg_d_periph;
-   assign d_valid_rd = op_mul | op_mulu | op_pop_ix |
+   assign d_valid_rd = op_mul | op_mulu | op_pop_ix | div_stage_two | rem_stage_two | //(op_any_div & inst[0] == 1'b0) |
                        op_adc | op_dcx | op_shl16 | op_shr16 | op_pop_a |
-                       op_lddiv | op_lra | op_add | op_sub | op_cmp | op_dcx | op_inx |
+                       lddiv_stage_two | op_lra | op_add | op_sub | op_cmp | op_dcx | op_inx |
                        op_ldxx | op_and | op_or | (op_swapi & !inst[9] & !dbg_d_access) | op_xor | op_swap |
                        (op_lda & !inst[9] & !dbg_d_access) | op_ldax;
    assign d_rd       = dbg_d_access ? dbg_d_rd : d_periph & cond[0] & exec_state;
    assign dbg_inc    = (dbg_we | dbg_rd) && dbg_a == 8'hf;
    assign sp_sum_op  = op_sra | op_lra | op_ads | op_pop_a | op_push_a | (op_swap & inst[9]) |
-                       op_push_ix | op_pop_ix | op_stxx | op_ldxx | op_shl16 | op_shr16 | op_any_div |
-                       op_lddiv;
+                       op_push_ix | op_pop_ix | op_stxx | op_ldxx | op_shl16 | op_shr16 | div_stage_two |
+                       rem_stage_two | lddiv_stage_two;
    assign d_addr_imm = inst[`PWORD_SIZE-6] == 1'b1 && inst[`PWORD_SIZE-4] == 1'b1 &&
                        inst[`PWORD_SIZE-2] == 1'b1;
    assign d_addr = dbg_d_access ? dbg_d_addr : stop ? ix : d_addr_imm ? {{(D_BITS-D_STCK){1'b0}}, inst[D_STCK-1:0]} : (sp_sum_op) ? sp_sum :
@@ -498,14 +508,15 @@ module lisa_core
       acc_misc = 8'bx;
       acc_ld_misc = 1'b0;
 
-      casex (inst[`PWORD_SIZE-1 -: 14])
+      casez (inst[`PWORD_SIZE-1 -: 14])
       14'b10100000000000:   {acc_ld_misc, acc_misc} = {1'b1, {acc[6:0], acc_shl_val}};       // shl
       14'b10100000000001:   {acc_ld_misc, acc_misc} = {1'b1, {acc_shr_val, acc[7:1]}};       // shr
       14'b10100000110000:   {acc_ld_misc, acc_misc} = {1'b1, d_i};                           // pop a
       14'b10100000000100:   {acc_ld_misc, acc_misc} = {1'b1, ix[7:0]};                       // txa
       14'b10100000000110:   {acc_ld_misc, acc_misc} = {1'b1, ix_cond, ix[(PC_BITS-1):8]};    // taxu
-      14'b10100011000xxx:   {acc_ld_misc, acc_misc} = {div_ready, div_result[7:0]};          // div,etc
-      14'b10100001110xxx:   {acc_ld_misc, acc_misc} = {1'b1, 7'h0, cond_load};               // ldac
+      14'b10100011000???:   {acc_ld_misc, acc_misc} = {div_ready, div_result[7:0]};          // div,etc
+      14'b10100001110???:   {acc_ld_misc, acc_misc} = {1'b1, 7'h0, cond_load};               // ldac
+      default:              {acc_ld_misc, acc_misc} = 9'h0;
       endcase
    end
 
@@ -514,7 +525,7 @@ module lisa_core
    begin
       acc_load_val = {1'b0, 8'bx};
 
-      casex (inst[`PWORD_SIZE-1 -: 6])
+      casez (inst[`PWORD_SIZE-1 -: 6])
       6'b100000:   acc_load_val = {1'b1, inst[7:0]};
       6'b100011:   acc_load_val = {1'b1, inst[7:0]};
       6'b100100:   acc_load_val = {1'b1, acc_sum[7:0]};
@@ -526,7 +537,7 @@ module lisa_core
       6'b110101:   acc_load_val = {1'b1, acc & inst[7:0]};
       6'b110110:   acc_load_val = {1'b1, acc | d_i};
       6'b111000:   acc_load_val = {1'b1, acc ^ d_i};
-      6'b11110x:   acc_load_val = {1'b1, d_i};
+      6'b11110?:   acc_load_val = {1'b1, d_i};
       6'b101000:   if (acc_ld_misc) acc_load_val = {1'b1, acc_misc};  
       default:
                    if (stop && dbg_we && dbg_a == 8'h1 && ~dbg_di[14])
@@ -630,7 +641,7 @@ module lisa_core
             ra_load = 1'b1;
             {ra_cond_val, ra_val} = {ix_cond, ix};
          end
-         else if (cond[0] & op_lddiv & d_ok)
+         else if (lddiv_stage_two & d_ok)
          begin
             ra_load = 1'b1;
             ra_val[7:0] = d_i;
@@ -653,9 +664,9 @@ module lisa_core
    // =================================================
    // Implement PC and state control
    // =================================================
-   always @(posedge clk or negedge rst_n)
+   always @(posedge clk or negedge rst_async_n)
    begin
-      if (!rst_n)
+      if (!rst_async_n)
       begin
          inst_r <= 'h0;
          pc <= {PC_BITS{1'b0}};
@@ -732,8 +743,8 @@ module lisa_core
                if (d_ok)
                begin
                   // Test for 2-stage operations
-                  if (cond[0] && (op_sra | op_lra | op_push_ix | op_pop_ix | op_stxx | op_ldxx |
-                           op_any_div))
+                  if ((cond[0] && (op_sra | op_lra | op_push_ix | op_pop_ix | op_stxx | op_ldxx |
+                           (op_any_div & inst_r[0]))) || div_stage_two || rem_stage_two)
                   begin
                      // Go to state 3
                      state <= 2'h3;
@@ -771,7 +782,7 @@ module lisa_core
                end
                else
                begin
-                  if (!op_any_div)
+                  if (!op_any_div & !div_stage_two & !rem_stage_two)
                   begin
                      if (d_ok)
                      begin
@@ -850,6 +861,11 @@ module lisa_core
                      cond[0] <= cond_load;
                      cond[1] <= ~cond_load;
                   end
+               default: // IF
+                  begin
+                     cond[0] <= cond_load;
+                     cond[1] <= 1'b1;
+                  end
               endcase 
             end
             else if (cond[0] && decode_state &&  (jump_taken || br_taken || op_call_ix || op_jmp_ix))
@@ -860,9 +876,10 @@ module lisa_core
                cond[1] <= 1'b1;
                cond[0] <= ra_cond;     // Pop condition code from ra
             end
-            else if (exec_state & cond[0] & op_ldx)
+            else if (exec_state & cond[0] & (op_ldx | op_lddiv | (op_any_div & inst[0] == 1'b0)))
                cond[0] <= 1'b0;
-            else if ((exec_state & (~(op_sra | op_lra | op_push_ix | op_pop_ix) | ldx_stage_two)) ||
+            else if ((exec_state & (~(op_sra | op_lra | op_push_ix | op_pop_ix) | ldx_stage_two |
+                        lddiv_stage_two | div_stage_two | rem_stage_two)) ||
                      (stg2_state && stage_two == 1'b1))
             begin
                cond[1] <= 1'b1;
@@ -964,6 +981,39 @@ module lisa_core
             ldx_stage_two_val = 1'b0;
             ldx_stage_two_load = 1'b1;
          end
+      end
+   end
+
+   // =================================================
+   // Implement logic for lddiv_stage_two and div_stage_two
+   // =================================================
+   always @(posedge clk)
+   begin
+      if (~rst_n)
+      begin
+         lddiv_stage_two <= 1'b0;
+         div_stage_two <= 1'b0;
+         rem_stage_two <= 1'b0;
+      end
+      else
+      begin
+         // lddiv_stage_two
+         if (reset || (exec_state & lddiv_stage_two & d_ok))
+            lddiv_stage_two <= 1'b0;
+         else if (exec_state && cond[0] && op_lddiv)
+            lddiv_stage_two <= 1'b1;
+
+         // div_stage_two
+         if (reset || (div_stage_two & div_ready))
+            div_stage_two <= 1'b0;
+         else if (exec_state && cond[0] && op_div & inst[0] == 1'b0)
+            div_stage_two <= 1'b1;
+
+         // rem_stage_two
+         if (reset || (rem_stage_two & div_ready ))
+            rem_stage_two <= 1'b0;
+         else if (exec_state && cond[0] && op_rem & inst[0] == 1'b0)
+            rem_stage_two <= 1'b1;
       end
    end
 
@@ -1156,9 +1206,9 @@ module lisa_core
          .rst_n                ( rst_n                ),
          .reset                ( reset                ),
          .op_start             ( op_div_start         ),
-         .op_div               ( op_div & amode[1]    ),
-         .op_rem               ( op_rem & amode[1]    ),
-         .op_remu              ( op_rem & ~amode[1]   ),
+         .op_div               ( (op_div | div_stage_two) & amode[1]    ),
+         .op_rem               ( (op_rem | rem_stage_two) & amode[1]    ),
+         .op_remu              ( (op_rem | rem_stage_two) & ~amode[1]   ),
          .div_rs1              ( div_dividend         ),
          .div_rs2              ( div_divisor          ),
          .div_rd               ( div_result           ),
@@ -1454,11 +1504,6 @@ module lisa_core
       if (op_ldxx)                                 ascii_instr = "ldxx";
       if (op_shr16)                                ascii_instr = "shr16";
       if (op_shl16)                                ascii_instr = "shl16";
-      if (op_div & amode[1])                       ascii_instr = "div";
-      if (op_div & ~amode[1])                      ascii_instr = "divu";
-      if (op_rem & amode[1])                       ascii_instr = "rem";
-      if (op_rem & ~amode[1])                      ascii_instr = "remu";
-      if (op_lddiv)                                ascii_instr = "lddiv";
       if (op_savec)                                ascii_instr = "savec";
       if (op_restc)                                ascii_instr = "restc";
       if (op_ldz)                                  ascii_instr = "ldz";
@@ -1469,9 +1514,11 @@ module lisa_core
       if (inst[`PWORD_SIZE-1] == 0)                ascii_instr = "jal";
       if (inst[`PWORD_SIZE-1 -: 6] == 6'h20)       ascii_instr = "ldi";
       if (inst[`PWORD_SIZE-1 -: 6] == 6'h23)       ascii_instr = "ret #";
+`ifdef SIMULATION
       if (op_ret)                                  ascii_instr = "ret";
       if (op_rc)                                   ascii_instr = "rc";
       if (op_rz)                                   ascii_instr = "rz";
+`endif
       if (inst[`PWORD_SIZE-1 -: 12] == 12'hA14)    ascii_instr = "amode";
       if (inst[`PWORD_SIZE-1 -: 6] == 6'h24)       ascii_instr = "adc";
       if (inst[`PWORD_SIZE-1 -: 14] == 14'h2800)   ascii_instr = "shl";
@@ -1501,6 +1548,11 @@ module lisa_core
       if (inst[`PWORD_SIZE-1 -: 6] == 6'h3B)       ascii_instr = "swap";
       if (inst[`PWORD_SIZE-1 -: 6] == 6'h37)       ascii_instr = "swapi";
       if (op_ldx | ldx_stage_two)                  ascii_instr = "ldx";
+      if (op_lddiv | lddiv_stage_two)              ascii_instr = "lddiv";
+      if ((op_div | div_stage_two) & amode[1])     ascii_instr = "div";
+      if ((op_div | div_stage_two) & ~amode[1])    ascii_instr = "divu";
+      if ((op_rem | rem_stage_two) & amode[1])     ascii_instr = "rem";
+      if ((op_rem | rem_stage_two) & ~amode[1])    ascii_instr = "remu";
 
       if (op_if)
       begin

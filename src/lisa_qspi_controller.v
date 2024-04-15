@@ -43,7 +43,6 @@ module lisa_qspi_controller
    input  wire [1:0]    debug_wstrb,         // Which bytes in the 32-bits to write
    output wire          debug_ready,         // Next 32-bit value is ready
    input  wire          debug_ready_ack,     // Next 32-bit value is ready
-   output wire          debug_xfer_done,     // Total xfer_len transfer is done
    input  wire          debug_valid,         // Indicates a valid request 
    input  wire [3:0]    debug_xfer_len,      // Number of 16-bit words to transfer
    input  wire [CHIP_SELECTS -1:0]  debug_ce_ctrl,
@@ -122,7 +121,6 @@ module lisa_qspi_controller
    assign c_ce_ctrl[0]        = debug_ce_ctrl;
    assign debug_rdata         = c_rdata[0];
    assign debug_ready         = c_ready[0];
-   assign debug_xfer_done     = c_xfer_done[0];
    assign custom_spi_cmd      = c_active[0] ? debug_custom_spi_cmd : 1'b0;
    assign cmd_quad_write      = debug_cmd_quad_write;
 
@@ -172,7 +170,7 @@ module lisa_qspi_controller
       for (genvar c = 0; c < N_CLIENTS; c = c + 1)
       begin : GEN_QQSPI_INPUTS
          assign c_active[c]    = active && (arb_sel == c);
-         assign c_rdata[c]     = c_active[c] ? rdata : 32'h0;
+         assign c_rdata[c]     = c_active[c] ? rdata : 16'h0;
          assign c_ready[c]     = c_active[c] ? ready : 1'b0;
          assign c_xfer_done[c] = c_active[c] ? xfer_done : 1'b0;
       end

@@ -691,6 +691,31 @@ module tt_um_lisa
    assign baud_set       = ui_in[7];
    assign debug_ready_ack= 1'b1;
 
+   reg   rx1_r1, rx1_r2;
+   reg   rx2_r1, rx2_r2;
+   reg   rx3_r1, rx3_r2;
+   always @(posedge clk or negedge rst_async_n_r[2])
+   begin
+      if (~rst_async_n_r[2])
+      begin
+         rx1_r1 <= 1'b0;
+         rx2_r1 <= 1'b0;
+         rx3_r1 <= 1'b0;
+         rx1_r2 <= 1'b0;
+         rx2_r2 <= 1'b0;
+         rx3_r2 <= 1'b0;
+      end
+      else
+      begin
+         rx1_r1 <= ui_in[3];
+         rx1_r2 <= rx1_r1;
+         rx2_r1 <= uio_in[6];
+         rx2_r2 <= rx2_r1;
+         rx3_r1 <= uio_in[4];
+         rx3_r2 <= rx3_r1;
+      end
+   end
+
    // ==========================================================================
    // Instantiate the debug controller
    // ==========================================================================
@@ -698,11 +723,14 @@ module tt_um_lisa
    (
       // Timing and reset inputs
       .clk                 ( clk                ), // System clock
-      .rst_n               ( rst_n_r[2]         ), // Active low reset
+      .rst_n               ( rst_async_n_r[2]   ), // Active low reset
       .disabled            ( ui_in[7]           ), // Disabled if set externally
-      .rx1                 ( ui_in[3]           ), // Input from the UART
-      .rx2                 ( uio_in[6]          ), // Input from the UART
-      .rx3                 ( uio_in[4]          ), // Input from the UART
+      //.rx1                 ( ui_in[3]           ), // Input from the UART
+      //.rx2                 ( uio_in[6]          ), // Input from the UART
+      //.rx3                 ( uio_in[4]          ), // Input from the UART
+      .rx1                 ( rx1_r2             ), // Input from the UART
+      .rx2                 ( rx2_r2             ), // Input from the UART
+      .rx3                 ( rx3_r2             ), // Input from the UART
       .wr                  ( brg_wr             ), // Write the baud rate
       .div                 ( brg_div            ), // The divisor
       .rx_sel              ( rx_sel             )  // Selected RX input
@@ -728,6 +756,10 @@ module tt_um_lisa
       .rx_sel              ( rx_sel             ),
       .output_mux_bits     ( output_mux_bits    ),
       .io_mux_bits         ( io_mux_bits        ),
+
+      .rx1                 ( rx1_r2             ), // Input from the UART
+      .rx2                 ( rx2_r2             ), // Input from the UART
+      .rx3                 ( rx3_r2             ), // Input from the UART
 
       // QSPI I/O signals
       .sclk                ( sclk               ),

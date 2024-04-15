@@ -106,6 +106,10 @@ module lisa_io_mux
    input  wire [15:0]      output_mux_bits,     // Output select bits per output
    input  wire [7:0]       io_mux_bits,         // I/O select bits per output
 
+   input  wire             rx1,
+   input  wire             rx2,
+   input  wire             rx3,
+
    // QSPI I/O signals
    input  wire             sclk,                // SPI clock input
    input  wire [1:0]       ce,                  // SPI Chip Enables
@@ -168,9 +172,13 @@ module lisa_io_mux
    // ==========================================================================
    // Assign the RX receive pin
    // ==========================================================================
-   assign debug_rx = rx_sel == 2'h1 ? ui_in[3] :      // Input from RP2040
-                     rx_sel == 2'h2 ? uio_in[6] :     // Input from PMOD UART
-                     rx_sel == 2'h3 ? uio_in[4] :     // Input from PMOD Custom board
+   //assign debug_rx = rx_sel == 2'h1 ? ui_in[3] :      // Input from RP2040
+   //                  rx_sel == 2'h2 ? uio_in[6] :     // Input from PMOD UART
+   //                  rx_sel == 2'h3 ? uio_in[4] :     // Input from PMOD Custom board
+   //                  1'b1;                            // No RX data
+   assign debug_rx = rx_sel == 2'h1 ? rx1 :           // Input from RP2040
+                     rx_sel == 2'h2 ? rx2 :           // Input from PMOD UART
+                     rx_sel == 2'h3 ? rx3 :           // Input from PMOD Custom board
                      1'b1;                            // No RX data
 
    // ==========================================================================

@@ -27,11 +27,9 @@ The following is a block diagram of the project:
                     | 128B  |   | CACHE | | CACHE |  | timer  |  
                     +-------+   +-------+ +-------+  +--------+  
 
-   - The LISA Core as a minimal set of register that allow it to run "C" programs:
-      - Program Counter
-      - Stack Pointer
-      - Index Register
-      - Return Address Register
+   - The LISA Core as a minimal set of register that allow it to run C programs:
+      - Program Counter + Return Address Resister
+      - Stack Pointer and Index Register (Indexed DATA RAM access)
       - Accumulator
        
    - Harvard architecture LISA Core (16-bit instruction, 15-bit address space)

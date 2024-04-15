@@ -16,6 +16,7 @@
   "FP_PDN_VOFFSET": 26.32,
   "FP_PDN_CFG": "pdn_cfg.tcl",
   "MAGIC_LEF_WRITE_USE_GDS": true,
+  "MAGIC_WRITE_LEF_PINONLY": true,
 
   "MACROS": {
     "RAM32": {
@@ -61,7 +62,7 @@
   ],
 
   "//": "period is in ns, so 50ns == 20mHz",
-  "CLOCK_PERIOD": 50,
+  "CLOCK_PERIOD": 45,
   "CLOCK_PORT": "clk",
 
   "//": "don't use power rings or met5",
@@ -69,7 +70,7 @@
   "RT_MAX_LAYER": "met4",
 
   "ROUTING_CORES": 8,
-  "PL_TARGET_DENSITY_PCT": 69,
+  "PL_TARGET_DENSITY_PCT": 62,
   "GRT_ALLOW_CONGESTION" : true,
 
   "//": "reduce wasted space",

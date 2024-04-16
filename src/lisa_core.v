@@ -160,13 +160,20 @@ module lisa_core
    output wire                   inst_we,
 
    // Data bus
+   (* keep = "true" *)
    input  wire [7:0]          d_i,
+   (* keep = "true" *)
    output reg  [7:0]          d_o,
+   (* keep = "true" *)
    output wire [D_BITS-1:0]   d_addr,
    output wire                d_periph,
+   (* keep = "true" *)
    output wire                d_we,
+   (* keep = "true" *)
    output wire                d_rd,
+   (* keep = "true" *)
    output wire                d_valid,
+   (* keep = "true" *)
    input  wire                d_ready,
 
    input  wire [7:0]          dbg_a,

@@ -40,11 +40,14 @@ module lisa_div
    input                clk, rst_n,
    input                reset,        // Positive synchronous reset
                         
+   (* keep = "true" *)
    input                op_start,
    input                op_div,
    input                op_rem,
    input                op_remu,
+   (* keep = "true" *)
    input       [15:0]   div_rs1,      // Divisor
+   (* keep = "true" *)
    input       [15:0]   div_rs2,      // Dividend
    output wire [15:0]   div_rd,
    output wire          div_ready,

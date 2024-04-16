@@ -47,7 +47,6 @@ module inst_cache
    output wire          core_i_ready,
 
    // Interface to the QSPI controller
-//   output wire [15:0]   qspi_addr,           // 8Mx32
    input  wire [15:0]   qspi_rdata,          // Read data
    output wire [15:0]   qspi_wdata,          // Data to write
    output wire [1:0]    qspi_wstrb,          // Which bytes in the 32-bits to write
@@ -55,7 +54,9 @@ module inst_cache
    output reg           qspi_ready_ack,      // ACK that next write data ready
    input  wire          qspi_xfer_done,      // Total xfer_len transfer is done
    output reg           qspi_valid,          // Indicates a valid request 
-   output wire [3:0]    qspi_xfer_len        // Number of 32-bit words to transfer
+   output wire [3:0]    qspi_xfer_len,       // Number of 32-bit words to transfer
+   input  wire          inst_cache_invalidate,
+   output wire          inst_cache_invalidate_ack
 );
    
    localparam [1:0] ST_IDLE               = 2'd0;
@@ -129,6 +130,8 @@ module inst_cache
    end
    assign core_i_ready = cache_valid;
 
+   assign inst_cache_invalidate_ack = inst_cache_invalidate & !cl_valid;
+
    // ==========================================================================
    // Generate valid and dirty bits
    // ==========================================================================
@@ -152,7 +155,7 @@ module inst_cache
          // Implement the cl_valid signals
          if (cl_set_valid)
             cl_valid <= 1'b1;
-         else if (cl_clear_valid)
+         else if (cl_clear_valid || inst_cache_invalidate)
             cl_valid <= 1'b0;
 
          // Implement the cl_addr updates

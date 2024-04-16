@@ -188,10 +188,20 @@ module lisa_io_mux
    for (genvar i = 0; i < 8; i = i + 1)
    begin: GEN_MUX_OUT
       assign out_mux_sel[i] = output_mux_bits[2*(i+1)-1 -: 2];
+      if (i == 4)
+      begin : GEN_OUT4
+      assign out_mux[i] = (out_mux_sel[i] == 2'h0 || rx_sel == 2'h1) ? out_default[i] :
+                          out_mux_sel[i] == 2'h1 ? lisa_porta_i[i] :
+                          out_mux_sel[i] == 2'h2 ? periph_sel1[i] :
+                                                   periph_sel2[i];
+      end
+      else
+      begin : GEN_OTHERS
       assign out_mux[i] = out_mux_sel[i] == 2'h0 ? out_default[i] :
                           out_mux_sel[i] == 2'h1 ? lisa_porta_i[i] :
                           out_mux_sel[i] == 2'h2 ? periph_sel1[i] :
                                                    periph_sel2[i];
+      end
    end
    endgenerate
 

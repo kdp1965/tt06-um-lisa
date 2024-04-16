@@ -239,6 +239,7 @@ module lisa_core
    reg                        c_val;
    wire                       c_cpi;
    wire                       d_addr_imm;
+   reg                        d_ready_r;
    reg                        cond_load;
    reg  [7:0]                 acc_misc;
    reg  [7:0]                 acc_delayed_val;
@@ -320,10 +321,11 @@ module lisa_core
    wire [D_BITS-1:0]          dbg_d_addr;
    wire                       dbg_d_access;
    wire                       dbg_d_periph;
-   wire                       dbg_d_we;
+//   wire                       dbg_d_we;
    wire                       dbg_d_rd;
    wire                       dbg_inc;
    reg                        dbg_inc_r;
+   wire                       dbg_ready_c;
    wire                       stop;
    wire                       cont_q;
 
@@ -476,15 +478,18 @@ module lisa_core
    end
 
    // TODO:  add read conditions to d_valid
-   assign d_valid    = (d_we & ~d_periph) | (d_valid_rd & (exec_state | stg2_state) && !ldx_stage_two);
+   assign d_valid    = (d_we & ~d_periph) | (d_valid_rd & (exec_state | stg2_state) && !ldx_stage_two) |
+                       (dbg_d_access && !dbg_d_periph) ;
    assign d_ok       = d_ready || !d_valid;
-   assign d_we       = dbg_d_access ? dbg_d_we : (stop && dbg_a == 8'h6) ? dbg_we : d_we_r;
+   //assign d_we       = dbg_d_access ? dbg_d_we : (stop && dbg_a == 8'h6) ? dbg_we : d_we_r;
+   assign d_we       = dbg_d_access ? dbg_we : d_we_r;
    assign d_periph   = ((op_sta | op_lda | op_swapi) & inst[9] & !dbg_d_access) | dbg_d_periph;
    assign d_valid_rd = op_mul | op_mulu | op_pop_ix | div_stage_two | rem_stage_two | //(op_any_div & inst[0] == 1'b0) |
                        op_adc | op_dcx | op_shl16 | op_shr16 | op_pop_a |
                        lddiv_stage_two | op_lra | op_add | op_sub | op_cmp | op_dcx | op_inx |
                        op_ldxx | op_and | op_or | (op_swapi & !inst[9] & !dbg_d_access) | op_xor | op_swap |
                        (op_lda & !inst[9] & !dbg_d_access) | op_ldax;
+   assign dbg_ready  = dbg_d_access ? d_ready_r : dbg_ready_c;
    assign d_rd       = dbg_d_access ? dbg_d_rd : d_periph & cond[0] & exec_state;
    assign dbg_inc    = (dbg_we | dbg_rd) && dbg_a == 8'hf;
    assign sp_sum_op  = op_sra | op_lra | op_ads | op_pop_a | op_push_a | (op_swap & inst[9]) |
@@ -674,12 +679,15 @@ module lisa_core
          stage_two <= 1'b0;
          d_we_r <= 1'b0;
          dbg_inc_r <= 1'b0;
+         d_ready_r <= 1'b0;
       end
       else
       begin
          // Register the instruction
          if (inst_ready & !d_we_r)
             inst_r <= inst_i;
+
+         d_ready_r <= d_ready;
 
          if (reset)
          begin
@@ -1349,7 +1357,7 @@ module lisa_core
          .d_access  ( dbg_d_access ),
          .d_addr    ( dbg_d_addr   ),
          .d_periph  ( dbg_d_periph ),
-         .d_we      ( dbg_d_we     ),
+//         .d_we      ( dbg_d_we     ),
          .d_rd      ( dbg_d_rd     ),
 
          .dbg_a      ( dbg_a       ),
@@ -1357,7 +1365,7 @@ module lisa_core
          .dbg_do     ( dbg_do      ),
          .dbg_we     ( dbg_we      ),
          .dbg_rd     ( dbg_rd      ),
-         .dbg_ready  ( dbg_ready   ),
+         .dbg_ready  ( dbg_ready_c ),
          .dbg_halted ( dbg_halted  )
       );
    end
@@ -1441,7 +1449,7 @@ module lisa_core
       // by replacing opcodes and then single-stepping.
       // ==================================================
       assign dbg_d_addr   = {D_BITS{1'b0}};
-      assign dbg_d_we     = 1'b0;
+//      assign dbg_d_we     = 1'b0;
       assign dbg_d_rd     = 1'b0;
       assign dbg_d_o      = 8'h00;
       assign dbg_d_periph = 1'b0;
@@ -1456,7 +1464,7 @@ module lisa_core
       assign dbg_ready    = 1'b1;
 
       assign dbg_d_addr   = {D_BITS{1'b0}};
-      assign dbg_d_we     = 1'b0;
+//      assign dbg_d_we     = 1'b0;
       assign dbg_d_rd     = 1'b0;
       assign dbg_d_o      = 8'h00;
       assign dbg_d_periph = 1'b0;

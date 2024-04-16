@@ -129,6 +129,12 @@ module tt_um_lisa
    wire                 ram_en;
    wire                 cache_disabled;
    wire   [1:0]         cache_map_sel;
+   wire                 data_cache_flush;
+   wire                 data_cache_flush_ack;
+   wire                 data_cache_invalidate;
+   wire                 data_cache_invalidate_ack;
+   wire                 inst_cache_invalidate;
+   wire                 inst_cache_invalidate_ack;
 
    // ==========================================================================
    // Debug signals
@@ -164,6 +170,9 @@ module tt_um_lisa
    wire                 lisa_rx_rd;
    wire                 lisa_rx_data_avail;
    wire                 lisa_tx_buf_empty;
+   reg                  rx1_r1, rx1_r2;
+   reg                  rx2_r1, rx2_r2;
+   reg                  rx3_r1, rx3_r2;
 
    // ==========================================================================
    // Lisa I2C
@@ -295,37 +304,37 @@ module tt_um_lisa
    // ==========================================================================
    lisa_core i_lisa_core
    (
-      .clk                 ( clk                ),
-      .rst_n               ( rst_n_r[2]         ),
-      .rst_async_n         ( rst_async_n_r[2]   ),
-      .reset               ( dbg_reset          ),
-                                             
-      // Instruction bus                     
-      .inst_i              ( core_inst          ),
-      .inst_ready          ( core_i_ready       ),
-      .i_fetch             ( core_i_fetch       ),
-      .i_addr              ( core_i_addr        ),
-      .inst_o              ( core_inst_o        ),
-      .inst_we             ( core_inst_we       ),
-                                                
-      // Data bus                               
-      .d_i                 ( d_i                ),
-      .d_o                 ( d_o                ),
-      .d_addr              ( d_addr             ),
-      .d_periph            ( d_periph           ),
-      .d_we                ( d_we               ),
-      .d_rd                ( d_rd               ),
-      .d_valid             ( d_valid            ),
-      .d_ready             ( d_ready            ),
-                                                
-      // Debug bus                              
-      .dbg_a               ( dbg_a              ),
-      .dbg_di              ( dbg_di             ),
-      .dbg_do              ( dbg_do_lisa        ),
-      .dbg_we              ( dbg_we             ),
-      .dbg_rd              ( dbg_rd             ),
-      .dbg_ready           ( dbg_ready_lisa     ),
-      .dbg_halted          ( dbg_halted         )
+      .clk                       ( clk                       ),
+      .rst_n                     ( rst_n_r[2]                ),
+      .rst_async_n               ( rst_async_n_r[2]          ),
+      .reset                     ( dbg_reset                 ),
+                                                             
+      // Instruction bus                                     
+      .inst_i                    ( core_inst                 ),
+      .inst_ready                ( core_i_ready              ),
+      .i_fetch                   ( core_i_fetch              ),
+      .i_addr                    ( core_i_addr               ),
+      .inst_o                    ( core_inst_o               ),
+      .inst_we                   ( core_inst_we              ),
+                                                             
+      // Data bus                                            
+      .d_i                       ( d_i                       ),
+      .d_o                       ( d_o                       ),
+      .d_addr                    ( d_addr                    ),
+      .d_periph                  ( d_periph                  ),
+      .d_we                      ( d_we                      ),
+      .d_rd                      ( d_rd                      ),
+      .d_valid                   ( d_valid                   ),
+      .d_ready                   ( d_ready                   ),
+                                                             
+      // Debug bus                                           
+      .dbg_a                     ( dbg_a                     ),
+      .dbg_di                    ( dbg_di                    ),
+      .dbg_do                    ( dbg_do_lisa               ),
+      .dbg_we                    ( dbg_we                    ),
+      .dbg_rd                    ( dbg_rd                    ),
+      .dbg_ready                 ( dbg_ready_lisa            ),
+      .dbg_halted                ( dbg_halted                )
    );
 
    // ==========================================================================
@@ -333,27 +342,29 @@ module tt_um_lisa
    // ==========================================================================
    inst_cache i_inst_cache
    (
-      .clk                 ( clk                  ),
-      .rst_n               ( rst_n_r[2]           ),
+      .clk                       ( clk                       ),
+      .rst_n                     ( rst_n_r[2]                ),
+                                                             
+      // Instruction bus                                     
+      .core_i_addr               ( core_i_addr               ),
+      .core_inst                 ( core_inst                 ),
+      .core_inst_i               ( core_inst_o               ),
+      .core_inst_we              ( core_inst_we              ),
+      .core_i_fetch              ( core_i_fetch              ),
+      .core_i_ready              ( core_i_ready              ),
+                                                             
+      // Interface to the QSPI controller                    
+      .qspi_rdata                ( lisa1_rdata               ),
+      .qspi_wdata                ( lisa1_wdata               ),
+      .qspi_wstrb                ( lisa1_wstrb               ),
+      .qspi_ready                ( lisa1_ready               ),
+      .qspi_ready_ack            ( lisa1_ready_ack           ),
+      .qspi_xfer_done            ( lisa1_xfer_done           ),
+      .qspi_valid                ( lisa1_valid               ),
+      .qspi_xfer_len             ( lisa1_xfer_len            ),
 
-      // Instruction bus                     
-      .core_i_addr         ( core_i_addr          ),
-      .core_inst           ( core_inst            ),
-      .core_inst_i         ( core_inst_o          ),
-      .core_inst_we        ( core_inst_we         ),
-      .core_i_fetch        ( core_i_fetch         ),
-      .core_i_ready        ( core_i_ready         ),
-
-      // Interface to the QSPI controller
-//      .qspi_addr           ( lisa1_addr           ),
-      .qspi_rdata          ( lisa1_rdata          ),
-      .qspi_wdata          ( lisa1_wdata          ),
-      .qspi_wstrb          ( lisa1_wstrb          ),
-      .qspi_ready          ( lisa1_ready          ),
-      .qspi_ready_ack      ( lisa1_ready_ack      ),
-      .qspi_xfer_done      ( lisa1_xfer_done      ),
-      .qspi_valid          ( lisa1_valid          ),
-      .qspi_xfer_len       ( lisa1_xfer_len       )
+      .inst_cache_invalidate     ( inst_cache_invalidate     ),
+      .inst_cache_invalidate_ack ( inst_cache_invalidate_ack )
    );
 
    // ==========================================================================
@@ -361,39 +372,43 @@ module tt_um_lisa
    // ==========================================================================
    data_cache i_data_cache
    (
-      .clk                 ( clk                  ),
-      .rst_n               ( rst_n_r[2]           ),
-      .disabled            ( cache_disabled       ),
-
-      // The data bus connection to LISA core
-      .d_addr              ( d_addr               ),
-      .d_i                 ( d_o                  ),
-      .d_o                 ( d_i_cache            ),
-      .d_valid             ( d_valid              ),
-      .d_we                ( d_we                 ),
-      .d_periph            ( d_periph             ),
-      .d_ready             ( d_ready              ),
-
-      // Interface to the RAM32 macro
-      .ram_we              ( ram_we               ),
-      .ram_en              ( ram_en               ),
-      .ram_a               ( ram_a                ),
-      .ram_di              ( ram_do               ),
-      .ram_do              ( ram_di               ),
+      .clk                       ( clk                       ),
+      .rst_n                     ( rst_n_r[2]                ),
+      .disabled                  ( cache_disabled            ),
+                                                             
+      // The data bus connection to LISA core                
+      .d_addr                    ( d_addr                    ),
+      .d_i                       ( d_o                       ),
+      .d_o                       ( d_i_cache                 ),
+      .d_valid                   ( d_valid                   ),
+      .d_we                      ( d_we                      ),
+      .d_periph                  ( d_periph                  ),
+      .d_ready                   ( d_ready                   ),
+                                                             
+      // Interface to the RAM32 macro                        
+      .ram_we                    ( ram_we                    ),
+      .ram_en                    ( ram_en                    ),
+      .ram_a                     ( ram_a                     ),
+      .ram_di                    ( ram_do                    ),
+      .ram_do                    ( ram_di                    ),
       
       // Selects the upper bit for CACHE line mapping
-      .cache_map_sel       ( cache_map_sel        ), 
+      .cache_map_sel             ( cache_map_sel             ), 
+      .data_cache_flush          ( data_cache_flush          ),
+      .data_cache_flush_ack      ( data_cache_flush_ack      ),
+      .data_cache_invalidate     ( data_cache_invalidate     ),
+      .data_cache_invalidate_ack ( data_cache_invalidate_ack ),
 
       // Interface to the QSPI controller
-      .qspi_addr           ( cache_addr           ),
-      .qspi_rdata          ( lisa2_rdata          ),
-      .qspi_wdata          ( lisa2_wdata          ),
-      .qspi_wstrb          ( lisa2_wstrb          ),
-      .qspi_ready          ( lisa2_ready          ),
-      .qspi_ready_ack      ( lisa2_ready_ack      ),
-      .qspi_xfer_done      ( lisa2_xfer_done      ),
-      .qspi_valid          ( lisa2_valid          ),
-      .qspi_xfer_len       ( lisa2_xfer_len       )
+      .qspi_addr                 ( cache_addr                ),
+      .qspi_rdata                ( lisa2_rdata               ),
+      .qspi_wdata                ( lisa2_wdata               ),
+      .qspi_wstrb                ( lisa2_wstrb               ),
+      .qspi_ready                ( lisa2_ready               ),
+      .qspi_ready_ack            ( lisa2_ready_ack           ),
+      .qspi_xfer_done            ( lisa2_xfer_done           ),
+      .qspi_valid                ( lisa2_valid               ),
+      .qspi_xfer_len             ( lisa2_xfer_len            )
    );
    assign lisa2_addr = { lisa2_base_addr, 8'h0 } | {8'h0, cache_addr};
 
@@ -406,26 +421,13 @@ module tt_um_lisa
       .VPWR(VPWR),
       .VGND(VGND),
 `endif
-      .CLK                 ( clk                  ),
-      .WE0                 ( ram_we               ),
-      .EN0                 ( ram_en               ),
-//      .A0                  ( d_addr[6:2]          ),
-      .A0                  ( ram_a                ),
-      .Di0                 ( ram_di               ),
-      .Do0                 ( ram_do               )
+      .CLK                       ( clk                       ),
+      .WE0                       ( ram_we                    ),
+      .EN0                       ( ram_en                    ),
+      .A0                        ( ram_a                     ),
+      .Di0                       ( ram_di                    ),
+      .Do0                       ( ram_do                    )
    );
-
-   // ==========================================================================
-   // Connect the RAM32 write enable and output signals
-   // ==========================================================================
-//   assign ram_we[0] = d_we & ~d_periph & (d_addr[1:0] == 2'h0);
-//   assign ram_we[1] = d_we & ~d_periph & (d_addr[1:0] == 2'h1);
-//   assign ram_we[2] = d_we & ~d_periph & (d_addr[1:0] == 2'h2);
-//   assign ram_we[3] = d_we & ~d_periph & (d_addr[1:0] == 2'h3);
-//   assign d_i_dram = ({8{d_addr[1:0] == 2'h0}} & ram_do[7:0])   |
-//                     ({8{d_addr[1:0] == 2'h1}} & ram_do[15:8])  |
-//                     ({8{d_addr[1:0] == 2'h2}} & ram_do[23:16]) |
-//                     ({8{d_addr[1:0] == 2'h3}} & ram_do[31:24]);
    assign d_i = d_periph ? d_i_periph : d_i_cache;
 
    // ==========================================================================
@@ -433,39 +435,39 @@ module tt_um_lisa
    // ==========================================================================
    lisa_periph i_lisa_periph
    (
-      .clk                 ( clk                ),
-      .rst_n               ( rst_n_r[2]         ),
-                                                
-      // Data bus                               
-      .d_i                 ( d_o                ),
-      .d_o                 ( d_i_periph         ),
-      .d_addr              ( d_addr[6:0]        ),
-      .d_periph            ( d_periph           ),
-      .d_we                ( d_we               ),
-      .d_rd                ( d_rd               ),
-                                                
-      // GPIO signals                           
-      .porta               ( porta              ),
-      .porta_in            ( porta_in           ),
-      .portb               ( portb              ),
-      .portb_in            ( portb_in           ),
-      .portb_dir           ( portb_dir          ),
-
-      // UART signals
-      .uart_tx_d           ( lisa_tx_d          ),
-      .uart_tx_wr          ( lisa_tx_wr         ),
-      .uart_rx_rd          ( lisa_rx_rd         ),
-      .uart_rx_d           ( lisa_rx_d          ),
-      .uart_rx_data_avail  ( lisa_rx_data_avail ),
-      .uart_tx_buf_empty   ( lisa_tx_buf_empty  ),
-
-      // I2C signals
-      .scl_pad_i           ( scl_pad_i          ),
-      .scl_pad_o           ( scl_pad_o          ),
-      .scl_padoen_o        ( scl_padoen_o       ),
-      .sda_pad_i           ( sda_pad_i          ),
-      .sda_pad_o           ( sda_pad_o          ),
-      .sda_padoen_o        ( sda_padoen_o       )
+      .clk                       ( clk                       ),
+      .rst_n                     ( rst_n_r[2]                ),
+                                                             
+      // Data bus                                            
+      .d_i                       ( d_o                       ),
+      .d_o                       ( d_i_periph                ),
+      .d_addr                    ( d_addr[6:0]               ),
+      .d_periph                  ( d_periph                  ),
+      .d_we                      ( d_we                      ),
+      .d_rd                      ( d_rd                      ),
+                                                             
+      // GPIO signals                                        
+      .porta                     ( porta                     ),
+      .porta_in                  ( porta_in                  ),
+      .portb                     ( portb                     ),
+      .portb_in                  ( portb_in                  ),
+      .portb_dir                 ( portb_dir                 ),
+                                                             
+      // UART signals                                        
+      .uart_tx_d                 ( lisa_tx_d                 ),
+      .uart_tx_wr                ( lisa_tx_wr                ),
+      .uart_rx_rd                ( lisa_rx_rd                ),
+      .uart_rx_d                 ( lisa_rx_d                 ),
+      .uart_rx_data_avail        ( lisa_rx_data_avail        ),
+      .uart_tx_buf_empty         ( lisa_tx_buf_empty         ),
+                                                             
+      // I2C signals                                         
+      .scl_pad_i                 ( scl_pad_i                 ),
+      .scl_pad_o                 ( scl_pad_o                 ),
+      .scl_padoen_o              ( scl_padoen_o              ),
+      .sda_pad_i                 ( sda_pad_i                 ),
+      .sda_pad_o                 ( sda_pad_o                 ),
+      .sda_padoen_o              ( sda_padoen_o              )
    );
 
    // ==========================================================================
@@ -473,113 +475,104 @@ module tt_um_lisa
    // ==========================================================================
    lisa_qspi_controller i_lisa_qspi_controller
    (
-      .clk                 ( clk                ),
-      .rst_n               ( rst_n_r[2]         ),
+      .clk                       ( clk                       ),
+      .rst_n                     ( rst_n_r[2]                ),
 
       // Interface for debug
-      .debug_addr          ( debug_addr         ), // 8Mx32
-      .debug_rdata         ( debug_rdata        ), // Read data
-      .debug_wdata         ( debug_wdata        ), // Data to write
-      .debug_wstrb         ( debug_wstrb        ), // Which bytes in the 32-bits to write
-      .debug_ready         ( debug_ready        ), // Next 32-bit value is ready
-      .debug_ready_ack     ( debug_ready_ack    ), // Indicates a valid request
-      .debug_valid         ( debug_valid        ), // Indicates a valid request
-      .debug_xfer_len      ( debug_xfer_len     ), // Number of 32-bit words to transfer
-      .debug_ce_ctrl       ( debug_ce_ctrl      ),
-      .debug_custom_spi_cmd( dbg_custom_spi_cmd ),
-      .debug_cmd_quad_write( dbg_cmd_quad_write ),
+      .debug_addr                ( debug_addr                ), // 8Mx32
+      .debug_rdata               ( debug_rdata               ), // Read data
+      .debug_wdata               ( debug_wdata               ), // Data to write
+      .debug_wstrb               ( debug_wstrb               ), // Which bytes in the 32-bits to write
+      .debug_ready               ( debug_ready               ), // Next 32-bit value is ready
+      .debug_ready_ack           ( debug_ready_ack           ), // Indicates a valid request
+      .debug_valid               ( debug_valid               ), // Indicates a valid request
+      .debug_xfer_len            ( debug_xfer_len            ), // Number of 32-bit words to transfer
+      .debug_ce_ctrl             ( debug_ce_ctrl             ),
+      .debug_custom_spi_cmd      ( dbg_custom_spi_cmd        ),
+      .debug_cmd_quad_write      ( dbg_cmd_quad_write        ),
 
       // Interface for Lisa core instruction bus
-      .lisa1_addr          ( lisa1_addr         ), // 8Mx32
-      .lisa1_rdata         ( lisa1_rdata        ), // Read data
-      .lisa1_wdata         ( lisa1_wdata        ), // Data to write
-      .lisa1_wstrb         ( lisa1_wstrb        ), // Which bytes in the 32-bits to write
-      .lisa1_ready         ( lisa1_ready        ), // Next 32-bit value is ready
-      .lisa1_ready_ack     ( lisa1_ready_ack    ), // Next 32-bit value is ready
-      .lisa1_xfer_done     ( lisa1_xfer_done    ), // Total xfer_len transfer is done
-      .lisa1_valid         ( lisa1_valid        ), // Indicates a valid request
-      .lisa1_xfer_len      ( lisa1_xfer_len     ), // Number of 32-bit words to transfer
-      .lisa1_ce_ctrl       ( lisa1_ce_ctrl      ),
+      .lisa1_addr                ( lisa1_addr                ), // 8Mx32
+      .lisa1_rdata               ( lisa1_rdata               ), // Read data
+      .lisa1_wdata               ( lisa1_wdata               ), // Data to write
+      .lisa1_wstrb               ( lisa1_wstrb               ), // Which bytes in the 32-bits to write
+      .lisa1_ready               ( lisa1_ready               ), // Next 32-bit value is ready
+      .lisa1_ready_ack           ( lisa1_ready_ack           ), // Next 32-bit value is ready
+      .lisa1_xfer_done           ( lisa1_xfer_done           ), // Total xfer_len transfer is done
+      .lisa1_valid               ( lisa1_valid               ), // Indicates a valid request
+      .lisa1_xfer_len            ( lisa1_xfer_len            ), // Number of 32-bit words to transfer
+      .lisa1_ce_ctrl             ( lisa1_ce_ctrl             ),
 
       // Interface for Lisa core data bus
-      .lisa2_addr          ( lisa2_addr         ), // 8Mx32
-      .lisa2_rdata         ( lisa2_rdata        ), // Read data
-      .lisa2_wdata         ( lisa2_wdata        ), // Data to write
-      .lisa2_wstrb         ( lisa2_wstrb        ), // Which bytes in the 32-bits to write
-      .lisa2_ready         ( lisa2_ready        ), // Next 32-bit value is ready
-      .lisa2_ready_ack     ( lisa2_ready_ack    ), // Next 32-bit value is ready
-      .lisa2_xfer_done     ( lisa2_xfer_done    ), // Total xfer_len transfer is done
-      .lisa2_valid         ( lisa2_valid        ), // Indicates a valid request
-      .lisa2_xfer_len      ( lisa2_xfer_len     ), // Number of 32-bit words to transfer
-      .lisa2_ce_ctrl       ( lisa2_ce_ctrl      ),
+      .lisa2_addr                ( lisa2_addr                ), // 8Mx32
+      .lisa2_rdata               ( lisa2_rdata               ), // Read data
+      .lisa2_wdata               ( lisa2_wdata               ), // Data to write
+      .lisa2_wstrb               ( lisa2_wstrb               ), // Which bytes in the 32-bits to write
+      .lisa2_ready               ( lisa2_ready               ), // Next 32-bit value is ready
+      .lisa2_ready_ack           ( lisa2_ready_ack           ), // Next 32-bit value is ready
+      .lisa2_xfer_done           ( lisa2_xfer_done           ), // Total xfer_len transfer is done
+      .lisa2_valid               ( lisa2_valid               ), // Indicates a valid request
+      .lisa2_xfer_len            ( lisa2_xfer_len            ), // Number of 32-bit words to transfer
+      .lisa2_ce_ctrl             ( lisa2_ce_ctrl             ),
 
       // Interface to the qqspi controller
-      .addr                ( addr               ), // 8Mx32
-      .rdata               ( rdata              ), // Read data
-      .wdata               ( wdata              ), // Data to write
-      .wstrb               ( wstrb              ), // Which bytes in the 32-bits to write
-      .ready               ( ready              ), // Next 32-bit value is ready
-      .ready_ack           ( ready_ack          ), // Next 32-bit value is ready
-      .xfer_done           ( xfer_done          ), // Total xfer_len transfer is done
-      .valid               ( valid              ), // Indicates a valid request
-      .xfer_len            ( xfer_len           ), // Number of 32-bit words to transfer
-      .ce_ctrl             ( ce_ctrl            ),
-      .custom_spi_cmd      ( custom_spi_cmd     ),
-      .cmd_quad_write      ( cmd_quad_write     )
+      .addr                      ( addr                      ), // 8Mx32
+      .rdata                     ( rdata                     ), // Read data
+      .wdata                     ( wdata                     ), // Data to write
+      .wstrb                     ( wstrb                     ), // Which bytes in the 32-bits to write
+      .ready                     ( ready                     ), // Next 32-bit value is ready
+      .ready_ack                 ( ready_ack                 ), // Next 32-bit value is ready
+      .xfer_done                 ( xfer_done                 ), // Total xfer_len transfer is done
+      .valid                     ( valid                     ), // Indicates a valid request
+      .xfer_len                  ( xfer_len                  ), // Number of 32-bit words to transfer
+      .ce_ctrl                   ( ce_ctrl                   ),
+      .custom_spi_cmd            ( custom_spi_cmd            ),
+      .cmd_quad_write            ( cmd_quad_write            )
    );
-
-   // TODO: Add cache controller for DATA bus
-   // For now Lisa data is only 128 Bytes ... no external
-//   assign lisa2_valid = 1'b0;
-//   assign lisa2_addr  = 'h0;
-//   assign lisa2_wdata = 'h0;
-//   assign lisa2_wstrb = 'h0;
-//   assign lisa2_xfer_len = 'h0;
-//   assign lisa2_ready_ack = 1'b1;
 
    // ==========================================================================
    // Instantiate the QQSPI controller
    // ==========================================================================
    lisa_qqspi i_lisa_qqspi
    (
-      .clk                 ( clk                ),
-      .rst_n               ( rst_n_r[2]         ),
+      .clk                       ( clk                       ),
+      .rst_n                     ( rst_n_r[2]                ),
      
       // The control interface
-      .addr                ( addr               ), // 8Mx32
-      .rdata               ( rdata              ), // Read data
-      .wdata               ( wdata              ), // Data to write
-      .wstrb               ( wstrb              ), // Which bytes in the 32-bits to write
-      .ready               ( ready              ), // Next 32-bit value is ready
-      .ready_ack           ( ready_ack          ), // Next 32-bit value is ready
-      .xfer_done           ( xfer_done          ), // Total xfer_len transfer is done
-      .valid               ( valid              ), // Indicates a valid request
-      .xfer_len            ( xfer_len           ), // Number of 32-bit words to transfer
+      .addr                      ( addr                      ), // 8Mx32
+      .rdata                     ( rdata                     ), // Read data
+      .wdata                     ( wdata                     ), // Data to write
+      .wstrb                     ( wstrb                     ), // Which bytes in the 32-bits to write
+      .ready                     ( ready                     ), // Next 32-bit value is ready
+      .ready_ack                 ( ready_ack                 ), // Next 32-bit value is ready
+      .xfer_done                 ( xfer_done                 ), // Total xfer_len transfer is done
+      .valid                     ( valid                     ), // Indicates a valid request
+      .xfer_len                  ( xfer_len                  ), // Number of 32-bit words to transfer
      
       // Per chip-select controls
-      .ce_ctrl             ( ce_ctrl            ),
-      .addr_16b            ( addr_16b           ),
-      .is_flash            ( is_flash           ),
-      .quad_mode           ( quad_mode          ),
-      .spi_clk_div         ( spi_clk_div        ),
-      .spi_ce_delay        ( spi_ce_delay       ),
-      .spi_mode            ( spi_mode           ),
+      .ce_ctrl                   ( ce_ctrl                   ),
+      .addr_16b                  ( addr_16b                  ),
+      .is_flash                  ( is_flash                  ),
+      .quad_mode                 ( quad_mode                 ),
+      .spi_clk_div               ( spi_clk_div               ),
+      .spi_ce_delay              ( spi_ce_delay              ),
+      .spi_mode                  ( spi_mode                  ),
      
       // The QSPI Pin interface
-      .sclk                ( sclk               ),
-      .sio0_si_mosi_i      ( sio0_si_mosi_i     ),
-      .sio1_so_miso_i      ( sio1_so_miso_i     ),
-      .sio2_i              ( sio2_i             ),
-      .sio3_i              ( sio3_i             ),
-      .sio0_si_mosi_o      ( sio0_si_mosi_o     ),
-      .sio1_so_miso_o      ( sio1_so_miso_o     ),
-      .sio2_o              ( sio2_o             ),
-      .sio3_o              ( sio3_o             ),
-      .sio_oe              ( sio_oe             ),
-      .ce                  ( ce                 ),
-      .dummy_read_cycles   ( dummy_read_cycles  ),
-      .custom_spi_cmd      ( custom_spi_cmd     ),
-      .cmd_quad_write      ( cmd_quad_write     )
+      .sclk                      ( sclk                      ),
+      .sio0_si_mosi_i            ( sio0_si_mosi_i            ),
+      .sio1_so_miso_i            ( sio1_so_miso_i            ),
+      .sio2_i                    ( sio2_i                    ),
+      .sio3_i                    ( sio3_i                    ),
+      .sio0_si_mosi_o            ( sio0_si_mosi_o            ),
+      .sio1_so_miso_o            ( sio1_so_miso_o            ),
+      .sio2_o                    ( sio2_o                    ),
+      .sio3_o                    ( sio3_o                    ),
+      .sio_oe                    ( sio_oe                    ),
+      .ce                        ( ce                        ),
+      .dummy_read_cycles         ( dummy_read_cycles         ),
+      .custom_spi_cmd            ( custom_spi_cmd            ),
+      .cmd_quad_write            ( cmd_quad_write            )
    );
 
    // ==========================================================================
@@ -587,39 +580,39 @@ module tt_um_lisa
    // ==========================================================================
    debug_ctrl i_debug_ctrl
    (
-      .clk                 ( clk                ),
-      .rst_n               ( rst_n_r[2]         ),
-      .rst_async_n         ( rst_async_n_r[2]   ),
-                                                
-      // UART signals                           
-      .debug_rx            ( debug_rx           ),
-      .debug_tx            ( debug_tx           ),
+      .clk                       ( clk                       ),
+      .rst_n                     ( rst_n_r[2]                ),
+      .rst_async_n               ( rst_async_n_r[2]          ),
+                                                             
+      // UART signals                                        
+      .debug_rx                  ( debug_rx                  ),
+      .debug_tx                  ( debug_tx                  ),
 
       // Processor debug interface
-      .debug_a             ( dbg_a              ),
-      .debug_dout          ( dbg_di             ),
-      .debug_din           ( dbg_do             ),
-      .debug_wr            ( dbg_we             ),
-      .debug_rd            ( dbg_rd             ),
-      .debug_reset         ( dbg_reset          ),
-      .debug_ready         ( dbg_ready          ),
-      .debug_halted        ( dbg_halted         ),
+      .debug_a                   ( dbg_a                     ),
+      .debug_dout                ( dbg_di                    ),
+      .debug_din                 ( dbg_do                    ),
+      .debug_wr                  ( dbg_we                    ),
+      .debug_rd                  ( dbg_rd                    ),
+      .debug_reset               ( dbg_reset                 ),
+      .debug_ready               ( dbg_ready                 ),
+      .debug_halted              ( dbg_halted                ),
                                                 
       // Baud rate manual set control
-      .brg_wr              ( brg_wr             ),
-      .brg_div             ( brg_div            ),
-      .baud_set            ( baud_set           ),
-      .baud_div            ( baud_div           ),
-      .baud_ref            ( baud_ref           ),
+      .brg_wr                    ( brg_wr                    ),
+      .brg_div                   ( brg_div                   ),
+      .baud_set                  ( baud_set                  ),
+      .baud_div                  ( baud_div                  ),
+      .baud_ref                  ( baud_ref                  ),
 
       // Signals to share UART with Lisa core
-      .plus_guard_time     ( plus_guard_time    ),
-      .lisa_tx_d           ( lisa_tx_d          ),
-      .lisa_tx_wr          ( lisa_tx_wr         ),
-      .lisa_rx_rd          ( lisa_rx_rd         ),
-      .lisa_rx_d           ( lisa_rx_d          ),
-      .lisa_rx_data_avail  ( lisa_rx_data_avail ),
-      .lisa_tx_buf_empty   ( lisa_tx_buf_empty  )
+      .plus_guard_time           ( plus_guard_time           ),
+      .lisa_tx_d                 ( lisa_tx_d                 ),
+      .lisa_tx_wr                ( lisa_tx_wr                ),
+      .lisa_rx_rd                ( lisa_rx_rd                ),
+      .lisa_rx_d                 ( lisa_rx_d                 ),
+      .lisa_rx_data_avail        ( lisa_rx_data_avail        ),
+      .lisa_tx_buf_empty         ( lisa_tx_buf_empty         )
    );
 
    // ==========================================================================
@@ -628,72 +621,69 @@ module tt_um_lisa
    debug_regs i_debug_regs
    (
       // Timing and reset inputs
-      .clk                 ( clk                ), // System clock
-      .rst_n               ( rst_n_r[2]         ), // Active low reset
+      .clk                       ( clk                       ), // System clock
+      .rst_n                     ( rst_n_r[2]                ), // Active low reset
 
       // The Debug ctrl interface
-      .dbg_a               ( dbg_a              ),
-      .dbg_di              ( dbg_di             ),
-      .dbg_do              ( dbg_do_regs        ),
-      .dbg_we              ( dbg_we             ),
-      .dbg_rd              ( dbg_rd             ),
-      .dbg_ready           ( dbg_ready_regs     ),
+      .dbg_a                     ( dbg_a                     ),
+      .dbg_di                    ( dbg_di                    ),
+      .dbg_do                    ( dbg_do_regs               ),
+      .dbg_we                    ( dbg_we                    ),
+      .dbg_rd                    ( dbg_rd                    ),
+      .dbg_ready                 ( dbg_ready_regs            ),
 
       // The Debug ctrl interface
-      .debug_addr          ( debug_addr         ), // 8Mx32
-      .debug_rdata         ( debug_rdata        ), // Read data
-      .debug_wdata         ( debug_wdata        ), // Data to write
-      .debug_wstrb         ( debug_wstrb        ), // Which bytes in the 32-bits to write
-      .debug_ready         ( debug_ready        ), // Next 32-bit value is ready
-      .debug_valid         ( debug_valid        ), // Indicates a valid request
-      .debug_xfer_len      ( debug_xfer_len     ), // Number of 16-bit words to transfer
-      .debug_ce_ctrl       ( debug_ce_ctrl      ),
+      .debug_addr                ( debug_addr                ), // 8Mx32
+      .debug_rdata               ( debug_rdata               ), // Read data
+      .debug_wdata               ( debug_wdata               ), // Data to write
+      .debug_wstrb               ( debug_wstrb               ), // Which bytes in the 32-bits to write
+      .debug_ready               ( debug_ready               ), // Next 32-bit value is ready
+      .debug_valid               ( debug_valid               ), // Indicates a valid request
+      .debug_xfer_len            ( debug_xfer_len            ), // Number of 16-bit words to transfer
+      .debug_ce_ctrl             ( debug_ce_ctrl             ),
 
       // Lisa core QSPI CE and base addresses
-      .lisa1_ce_ctrl       ( lisa1_ce_ctrl      ),
-      .lisa1_base_addr     ( lisa1_base_addr    ),
-      .lisa2_ce_ctrl       ( lisa2_ce_ctrl      ),
-      .lisa2_base_addr     ( lisa2_base_addr    ),
+      .lisa1_ce_ctrl             ( lisa1_ce_ctrl             ),
+      .lisa1_base_addr           ( lisa1_base_addr           ),
+      .lisa2_ce_ctrl             ( lisa2_ce_ctrl             ),
+      .lisa2_base_addr           ( lisa2_base_addr           ),
 
       // QSPI Chip Enable options
-      .addr_16b            ( addr_16b           ),
-      .is_flash            ( is_flash           ),
-      .quad_mode           ( quad_mode          ),
-      .dummy_read_cycles   ( dummy_read_cycles  ),
-
-      .custom_spi_cmd      ( dbg_custom_spi_cmd ),
-      .cmd_quad_write      ( dbg_cmd_quad_write ),
-      .plus_guard_time     ( plus_guard_time    ),
-      .spi_clk_div         ( spi_clk_div        ),
-      .spi_ce_delay        ( spi_ce_delay       ),
-      .spi_mode            ( spi_mode           ),
-
-      // I/O Mux Bits
-      .output_mux_bits     ( output_mux_bits    ),
-      .io_mux_bits         ( io_mux_bits        ),
+      .addr_16b                  ( addr_16b                  ),
+      .is_flash                  ( is_flash                  ),
+      .quad_mode                 ( quad_mode                 ),
+      .dummy_read_cycles         ( dummy_read_cycles         ),
+                                                             
+      .custom_spi_cmd            ( dbg_custom_spi_cmd        ),
+      .cmd_quad_write            ( dbg_cmd_quad_write        ),
+      .plus_guard_time           ( plus_guard_time           ),
+      .spi_clk_div               ( spi_clk_div               ),
+      .spi_ce_delay              ( spi_ce_delay              ),
+      .spi_mode                  ( spi_mode                  ),
+                                                             
+      // I/O Mux Bits                                        
+      .output_mux_bits           ( output_mux_bits           ),
+      .io_mux_bits               ( io_mux_bits               ),
 
       // Cache control
-      .cache_disabled      ( cache_disabled     ),
-      .cache_map_sel       ( cache_map_sel      )
+      .cache_disabled            ( cache_disabled            ),
+      .cache_map_sel             ( cache_map_sel             ),
+
+      .data_cache_flush          ( data_cache_flush          ),
+      .data_cache_flush_ack      ( data_cache_flush_ack      ),
+      .data_cache_invalidate     ( data_cache_invalidate     ),
+      .data_cache_invalidate_ack ( data_cache_invalidate_ack ),
+      .inst_cache_invalidate     ( inst_cache_invalidate     ),
+      .inst_cache_invalidate_ack ( inst_cache_invalidate_ack )
    );
 
    assign dbg_do         = dbg_do_lisa | dbg_do_regs;
    assign dbg_ready      = dbg_ready_lisa | dbg_ready_regs;
    assign lisa1_addr     = {lisa1_base_addr, 8'h0} | {8'h0, core_i_addr, 1'b0};
-//   assign lisa1_valid    = core_i_fetch | core_inst_we;
-//   assign lisa1_wstrb    = {core_inst_we, core_inst_we};
-//   assign lisa1_wdata    = core_inst_o;
-//   assign lisa1_xfer_len = 4'h0;             // Zero means 1 16-bit transfer
-//   assign lisa1_ready_ack= 1'b1;             // Always ready
-//   assign core_inst      = lisa1_rdata;
-//   assign core_i_ready   = lisa1_ready;
    assign baud_div       = ui_in[6:0];
    assign baud_set       = ui_in[7];
    assign debug_ready_ack= 1'b1;
 
-   reg   rx1_r1, rx1_r2;
-   reg   rx2_r1, rx2_r2;
-   reg   rx3_r1, rx3_r2;
    always @(posedge clk or negedge rst_async_n_r[2])
    begin
       if (~rst_async_n_r[2])
@@ -722,18 +712,15 @@ module tt_um_lisa
    debug_autobaud i_debug_autobaud
    (
       // Timing and reset inputs
-      .clk                 ( clk                ), // System clock
-      .rst_n               ( rst_async_n_r[2]   ), // Active low reset
-      .disabled            ( ui_in[7]           ), // Disabled if set externally
-      //.rx1                 ( ui_in[3]           ), // Input from the UART
-      //.rx2                 ( uio_in[6]          ), // Input from the UART
-      //.rx3                 ( uio_in[4]          ), // Input from the UART
-      .rx1                 ( rx1_r2             ), // Input from the UART
-      .rx2                 ( rx2_r2             ), // Input from the UART
-      .rx3                 ( rx3_r2             ), // Input from the UART
-      .wr                  ( brg_wr             ), // Write the baud rate
-      .div                 ( brg_div            ), // The divisor
-      .rx_sel              ( rx_sel             )  // Selected RX input
+      .clk                       ( clk                       ), // System clock
+      .rst_n                     ( rst_async_n_r[2]          ), // Active low reset
+      .disabled                  ( ui_in[7]                  ), // Disabled if set externally
+      .rx1                       ( rx1_r2                    ), // Input from the UART
+      .rx2                       ( rx2_r2                    ), // Input from the UART
+      .rx3                       ( rx3_r2                    ), // Input from the UART
+      .wr                        ( brg_wr                    ), // Write the baud rate
+      .div                       ( brg_div                   ), // The divisor
+      .rx_sel                    ( rx_sel                    )  // Selected RX input
    );
 
    // ==========================================================================
@@ -741,60 +728,60 @@ module tt_um_lisa
    // ==========================================================================
    lisa_io_mux i_lisa_io_mux
    (
-      .clk                 ( clk                ),
-      .rst_n               ( rst_n_r[2]         ),
-      .ena                 ( ena                ),
+      .clk                       ( clk                       ),
+      .rst_n                     ( rst_n_r[2]                ),
+      .ena                       ( ena                       ),
 
       // Chip top I/O signals
-      .ui_in               ( ui_in              ),
-      .uo_out              ( uo_out             ),
-      .uio_in              ( uio_in             ),
-      .uio_out             ( uio_out            ),
-      .uio_oe              ( uio_oe             ),
+      .ui_in                     ( ui_in                     ),
+      .uo_out                    ( uo_out                    ),
+      .uio_in                    ( uio_in                    ),
+      .uio_out                   ( uio_out                   ),
+      .uio_oe                    ( uio_oe                    ),
 
       // I/O mux controls
-      .rx_sel              ( rx_sel             ),
-      .output_mux_bits     ( output_mux_bits    ),
-      .io_mux_bits         ( io_mux_bits        ),
+      .rx_sel                    ( rx_sel                    ),
+      .output_mux_bits           ( output_mux_bits           ),
+      .io_mux_bits               ( io_mux_bits               ),
 
-      .rx1                 ( rx1_r2             ), // Input from the UART
-      .rx2                 ( rx2_r2             ), // Input from the UART
-      .rx3                 ( rx3_r2             ), // Input from the UART
+      .rx1                       ( rx1_r2                    ), // Input from the UART
+      .rx2                       ( rx2_r2                    ), // Input from the UART
+      .rx3                       ( rx3_r2                    ), // Input from the UART
 
       // QSPI I/O signals
-      .sclk                ( sclk               ),
-      .ce                  ( ce                 ),
-      .sio0_si_mosi_i      ( sio0_si_mosi_i     ),
-      .sio1_so_miso_i      ( sio1_so_miso_i     ),
-      .sio2_i              ( sio2_i             ),
-      .sio3_i              ( sio3_i             ),
-      .sio0_si_mosi_o      ( sio0_si_mosi_o     ),
-      .sio1_so_miso_o      ( sio1_so_miso_o     ),
-      .sio2_o              ( sio2_o             ),
-      .sio3_o              ( sio3_o             ),
-      .sio_oe              ( sio_oe             ),
+      .sclk                      ( sclk                      ),
+      .ce                        ( ce                        ),
+      .sio0_si_mosi_i            ( sio0_si_mosi_i            ),
+      .sio1_so_miso_i            ( sio1_so_miso_i            ),
+      .sio2_i                    ( sio2_i                    ),
+      .sio3_i                    ( sio3_i                    ),
+      .sio0_si_mosi_o            ( sio0_si_mosi_o            ),
+      .sio1_so_miso_o            ( sio1_so_miso_o            ),
+      .sio2_o                    ( sio2_o                    ),
+      .sio3_o                    ( sio3_o                    ),
+      .sio_oe                    ( sio_oe                    ),
 
       // Lisa parallel port signals
-      .lisa_porta_i        ( porta              ),
-      .lisa_porta_o        ( porta_in           ),
-      .lisa_portb_i        ( portb              ),
-      .lisa_portb_dir_i    ( portb_dir          ),
-      .lisa_portb_o        ( portb_in           ),
-
-      // UART inputs
-      .baud_ref            ( baud_ref           ),
-      .debug_tx            ( debug_tx           ),
-
-      // I2C signals
-      .scl_pad_i           ( scl_pad_i          ),
-      .scl_pad_o           ( scl_pad_o          ),
-      .scl_padoen_o        ( scl_padoen_o       ),
-      .sda_pad_i           ( sda_pad_i          ),
-      .sda_pad_o           ( sda_pad_o          ),
-      .sda_padoen_o        ( sda_padoen_o       ),
-
-      // Muxed outputs
-      .debug_rx            ( debug_rx           ) 
+      .lisa_porta_i              ( porta                     ),
+      .lisa_porta_o              ( porta_in                  ),
+      .lisa_portb_i              ( portb                     ),
+      .lisa_portb_dir_i          ( portb_dir                 ),
+      .lisa_portb_o              ( portb_in                  ),
+                                                             
+      // UART inputs                                         
+      .baud_ref                  ( baud_ref                  ),
+      .debug_tx                  ( debug_tx                  ),
+                                                             
+      // I2C signals                                         
+      .scl_pad_i                 ( scl_pad_i                 ),
+      .scl_pad_o                 ( scl_pad_o                 ),
+      .scl_padoen_o              ( scl_padoen_o              ),
+      .sda_pad_i                 ( sda_pad_i                 ),
+      .sda_pad_o                 ( sda_pad_o                 ),
+      .sda_padoen_o              ( sda_padoen_o              ),
+                                                             
+      // Muxed outputs                                       
+      .debug_rx                  ( debug_rx                  ) 
    );
 
 endmodule // tt_um_lisa

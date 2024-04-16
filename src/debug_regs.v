@@ -76,7 +76,13 @@ module debug_regs
    output reg  [7:0]          io_mux_bits,
 
    output reg                 cache_disabled,
-   output reg  [1:0]          cache_map_sel
+   output reg  [1:0]          cache_map_sel,
+   output reg                 data_cache_flush,
+   input  wire                data_cache_flush_ack,
+   output reg                 data_cache_invalidate,
+   input  wire                data_cache_invalidate_ack,
+   output reg                 inst_cache_invalidate,
+   input  wire                inst_cache_invalidate_ack
 );
 
    wire        debug_qspi_write;
@@ -121,6 +127,9 @@ module debug_regs
          spi_clk_div       <= 4'h0;
          spi_ce_delay      <= 7'h0;
          spi_mode          <= 2'h0;
+         data_cache_flush  <= 1'b0;
+         data_cache_invalidate <=1'b0;
+         inst_cache_invalidate <= 1'b0;
       end
       else
       begin
@@ -140,13 +149,24 @@ module debug_regs
                4'ha: plus_guard_time <= dbg_di[3:0];
                4'hb: output_mux_bits <= dbg_di;
                4'hc: io_mux_bits <= dbg_di[7:0];
-               4'hd: {cache_disabled, cache_map_sel} <= dbg_di[2:0];
+               4'hd: {inst_cache_invalidate, data_cache_invalidate, data_cache_flush,
+                        cache_disabled, cache_map_sel} <= dbg_di[5:0];
+   
                4'he: {spi_mode, spi_ce_delay, spi_clk_div} <= dbg_di[12:0];
                default: begin end
             endcase
          end
          else if (dbg_a == 8'h20 && (dbg_we || dbg_rd) && debug_ready)
             debug_addr <= debug_addr + 24'h2;
+         else
+         begin
+            if (data_cache_flush_ack)
+               data_cache_flush <= 1'b0;
+            if (data_cache_invalidate_ack)
+               data_cache_invalidate <= 1'b0;
+            if (inst_cache_invalidate_ack)
+               inst_cache_invalidate <= 1'b0;
+         end
       end
    end
 
@@ -172,7 +192,8 @@ module debug_regs
          4'ha: dbg_do = {12'h0, plus_guard_time};
          4'hb: dbg_do = output_mux_bits;
          4'hc: dbg_do = {8'h0, io_mux_bits};
-         4'hd: dbg_do = {13'h0, cache_disabled, cache_map_sel};
+         4'hd: dbg_do = {10'h0, inst_cache_invalidate, data_cache_invalidate,
+                         data_cache_flush, cache_disabled, cache_map_sel};
          4'he: dbg_do = {3'h0, spi_mode, spi_ce_delay, spi_clk_div};
          default dbg_do = 16'h0;
          endcase

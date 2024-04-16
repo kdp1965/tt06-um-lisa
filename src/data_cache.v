@@ -54,6 +54,10 @@ module data_cache
    
    // Selects the upper bit for CACHE line mapping
    input  wire [1:0]    cache_map_sel,
+   input  wire          data_cache_flush,
+   output reg           data_cache_flush_ack,
+   input  wire          data_cache_invalidate,
+   output reg           data_cache_invalidate_ack,
 
    // Interface to the QSPI controller
    output wire [15:0]   qspi_addr,           // 8Mx32
@@ -75,6 +79,8 @@ module data_cache
    localparam [3:0] ST_LOAD               = 4'd5;
    localparam [3:0] ST_LOAD_NEXT          = 4'd6;
    localparam [3:0] ST_LOAD_DONE          = 4'd7;
+   localparam [3:0] ST_FLUSH              = 4'd8;
+   localparam [3:0] ST_FLUSH_NEXT         = 4'd9;
 
    // ==========================================================================
    // CACHE line addresses and controls
@@ -114,6 +120,10 @@ module data_cache
    reg   [3:0]          fsm_a_next;          // Address used by FSM for load/save
    reg                  ready_ack;
    reg                  ready_ack_next;
+   reg                  flush_active;
+   reg                  flush_active_next;
+   reg   [1:0]          flush_cache_line;
+   reg   [1:0]          flush_cache_line_next;
 
    // ==========================================================================
    // Test for data hit
@@ -132,7 +142,7 @@ module data_cache
    assign map_sel[1]   = cache_map == 2'h1;
    assign map_sel[2]   = cache_map == 2'h2;
    assign map_sel[3]   = cache_map == 2'h3;
-   assign cache_map    = {cache_map_bit, d_addr[5]};
+   assign cache_map    = flush_active ? flush_cache_line : {cache_map_bit, d_addr[5]};
    assign cache_sel[0] = cache_map == 2'h0;
    assign cache_sel[1] = cache_map == 2'h1;
    assign cache_sel[2] = cache_map == 2'h2;
@@ -207,7 +217,6 @@ module data_cache
       begin
          cl_valid <= 4'h0;
          cl_dirty <= 4'h0;
-//         d_ready  <= 1'b0;
          cl_addr0 <= 8'h0;
          cl_addr1 <= 8'h0;
          cl_addr2 <= 8'h0;
@@ -231,9 +240,6 @@ module data_cache
                cl_valid[i] <= 1'b0;
          end
 
-         // Implement the d_ready signal back to LISA
-//         d_ready <= d_valid && cache_hit;
-
          // Implement the cl_addr updates
          if (cl_update[0])
             cl_addr0 <= d_addr[13:6];
@@ -253,36 +259,44 @@ module data_cache
    begin
       if (~rst_n)
       begin
-         state       <= ST_IDLE;
-         save_active <= 1'b0;
-         load_active <= 1'b0;
-         fsm_a       <= 4'h0;
-         ready_ack   <= 1'b0;
+         state            <= ST_IDLE;
+         save_active      <= 1'b0;
+         load_active      <= 1'b0;
+         fsm_a            <= 4'h0;
+         ready_ack        <= 1'b0;
+         flush_active     <= 1'b0;;
+         flush_cache_line <= 2'h0;
       end
       else
       begin
-         state       <= state_next;
-         save_active <= save_active_next;
-         load_active <= load_active_next;
-         fsm_a       <= fsm_a_next;
-         ready_ack   <= ready_ack_next;
+         state            <= state_next;
+         save_active      <= save_active_next;
+         load_active      <= load_active_next;
+         fsm_a            <= fsm_a_next;
+         ready_ack        <= ready_ack_next;
+         flush_active     <= flush_active_next;
+         flush_cache_line <= flush_cache_line_next;
       end
    end
 
    always @*
    begin
-      state_next       = state;
-      save_active_next = save_active;
-      load_active_next = load_active;
-      fsm_a_next       = fsm_a;
-      ready_ack_next   = ready_ack;
-      save_done        = 4'h0;
-      cl_update        = 4'h0;
-      qspi_valid       = 1'b0;
-      qspi_ready_ack   = 1'b0;
-      cl_clear_valid   = 4'h0;
-      cl_set_valid     = 4'h0;
-      write_we         = 1'b0;
+      state_next            = state;
+      save_active_next      = save_active;
+      load_active_next      = load_active;
+      fsm_a_next            = fsm_a;
+      ready_ack_next        = ready_ack;
+      save_done             = 4'h0;
+      cl_update             = 4'h0;
+      qspi_valid            = 1'b0;
+      qspi_ready_ack        = 1'b0;
+      cl_clear_valid        = 4'h0;
+      cl_set_valid          = 4'h0;
+      write_we              = 1'b0;
+      data_cache_flush_ack  = 1'b0;
+      data_cache_invalidate_ack = 1'b0;
+      flush_active_next     = flush_active;
+      flush_cache_line_next = flush_cache_line;
 
       case (state)
          ST_IDLE:
@@ -313,6 +327,15 @@ module data_cache
                      load_active_next = 1'b1;
                   end
                end
+               else if ((data_cache_flush | data_cache_invalidate) &
+                         !disabled)
+               begin
+                  // Start at beginning of mapped CACHE line
+                  fsm_a_next = 4'h0;
+                  flush_active_next = 1'b1;
+                  flush_cache_line_next = 2'h0;
+                  state_next = ST_FLUSH;
+               end
             end
 
          // Here we initialize the CACHE line save operation
@@ -333,7 +356,6 @@ module data_cache
                if (qspi_ready)
                begin
                   if (!qspi_xfer_done)
-                  //if (fsm_a != 4'hF)
                   begin
                      // Increment to the next address and to 
                      // to state to ACK and read RAM
@@ -361,15 +383,21 @@ module data_cache
                // Start load at beginning of mapped CACHE line
                fsm_a_next = 4'h0;
 
-               // Set the load_active bit
-               load_active_next = 1'b1;
+               // Test for debug cache flush
+               if (flush_active)
+                  state_next = ST_FLUSH_NEXT;
+               else
+               begin
+                  // Set the load_active bit
+                  load_active_next = 1'b1;
 
-               // Mark current cache_map as not valid
-               cl_clear_valid[cache_map] = 1'b1;
+                  // Mark current cache_map as not valid
+                  cl_clear_valid[cache_map] = 1'b1;
 
-               // Update the CACHE line address
-               cl_update[cache_map] = 1'b1;
-               state_next = ST_LOAD;
+                  // Update the CACHE line address
+                  cl_update[cache_map] = 1'b1;
+                  state_next = ST_LOAD;
+               end
             end
 
          // Here we wait for the RAM to read the next data
@@ -403,7 +431,6 @@ module data_cache
 
                   // Test if the transfer is complete
                   if (!qspi_xfer_done)
-                  //if (fsm_a != 4'hF)
                   begin
                      // Increment to the next address and to 
                      // to state to ACK and read RAM
@@ -440,6 +467,44 @@ module data_cache
                state_next = ST_IDLE;
             end
 
+         ST_FLUSH:
+            begin
+               // Test if the current cache line is dirty then we must save it
+               if (cl_dirty[cache_map])
+               begin
+                  // Write this cache line to QSPI SRAM
+                  fsm_a_next = 4'h0;
+                  state_next = ST_SAVE_BEGIN;
+                  save_active_next = 1'b1;
+               end
+               else
+                  state_next = ST_FLUSH_NEXT;
+            end
+
+         ST_FLUSH_NEXT:
+            begin
+               // Test for flush completion
+               if (flush_cache_line == 2'h3)
+               begin
+                  // Test for invalidate
+                  if (data_cache_invalidate)
+                  begin
+                     // Invalidate the entire cache
+                     cl_clear_valid = 4'hf;         
+                     data_cache_invalidate_ack = 1'b1;
+                  end
+
+                  // Flush complete
+                  flush_active_next = 1'b0;
+                  data_cache_flush_ack = 1'b1;
+                  state_next = ST_IDLE;
+               end
+               else
+               begin
+                  flush_cache_line_next = flush_cache_line + 2'h1;
+                  state_next = ST_FLUSH;
+               end
+            end
          default:
             state_next = ST_IDLE;
       endcase

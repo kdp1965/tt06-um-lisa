@@ -190,12 +190,15 @@ module lisa_core
 
    reg  [`PWORD_SIZE-1:0]     inst_r;
    wire [`PWORD_SIZE-1:0]     inst;
+   (* keep = "true" *)
    reg  [7:0]                 acc;
+   (* keep = "true" *)
    wire [PC_BITS-1:0]         ix;
    reg  [PC_BITS-1:0]         ix_val;
    wire                       ix_cond;
    reg                        ix_load;
    reg                        ix_cond_val;
+   (* keep = "true" *)
    reg  [D_BITS-1:0 ]         sp;
    wire                       cflag;
    reg                        cflag_save;
@@ -204,7 +207,9 @@ module lisa_core
    reg                        signed_inv_save;
    wire                       zflag;
    reg  [1:0]                 state;
+   (* keep = "true" *)
    reg  [PC_BITS-1:0]         pc;
+   (* keep = "true" *)
    wire [PC_BITS-1:0]         ra;                     // Return Address
    reg  [PC_BITS-1:0]         ra_val;                 // Return Address
    wire                       ra_cond;

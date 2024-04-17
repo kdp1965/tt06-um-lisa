@@ -143,7 +143,7 @@ module lisa_core
       parameter PC_BITS        = 15,
       parameter D_BITS         = 15,       // NOTE: Up to PC_BITS
       parameter WANT_DBG       = 1,
-      parameter DBG_BRKPOINTS  = 4
+      parameter DBG_BRKPOINTS  = 6
 )
 (
    input                      clk,
@@ -506,7 +506,7 @@ module lisa_core
                        lddiv_stage_two | op_lra | op_add | op_sub | op_cmp | op_dcx | op_inx |
                        op_ldxx | op_and | op_or | (op_swapi & !inst[9] & !dbg_d_access) | op_xor | op_swap |
                        (op_lda & !inst[9] & !dbg_d_access) | op_ldax;
-   assign dbg_ready  = dbg_d_access ? d_ready_r : dbg_ready_c;
+   assign dbg_ready  = (dbg_d_access & !d_periph) ? d_ready_r : dbg_ready_c;
    assign d_rd       = dbg_d_access ? dbg_d_rd : d_periph & cond[0] & exec_state;
    assign dbg_inc    = (dbg_we | dbg_rd) && dbg_a == 8'hf;
    assign sp_sum_op  = op_sra | op_lra | op_ads | op_pop_a | op_push_a | (op_swap & inst[9]) |

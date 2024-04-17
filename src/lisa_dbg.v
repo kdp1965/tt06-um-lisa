@@ -52,11 +52,13 @@ Debug module:
 
 ==========================================================================================
 */
+`define SIX_BREAK
+
 module lisa_dbg
 #(
       parameter PC_BITS        = 12,
       parameter D_BITS         = 9,
-      parameter DBG_BRKPOINTS  = 4
+      parameter DBG_BRKPOINTS  = 6
 )
 (
    input                      clk,
@@ -83,7 +85,6 @@ module lisa_dbg
    output wire                d_access,
    input  wire [7:0]          d_i,
    output wire                d_periph,
-   //output reg                 d_we,
    output reg                 d_rd,
 
    // The debug control bus
@@ -103,6 +104,10 @@ module lisa_dbg
    reg  [PC_BITS:0]  brk_r1;
    reg  [PC_BITS:0]  brk_r2;
    reg  [PC_BITS:0]  brk_r3;
+`ifdef SIX_BREAK
+   reg  [PC_BITS:0]  brk_r4;
+   reg  [PC_BITS:0]  brk_r5;
+`endif
    reg               brk_halt;
    reg               d_access_r;
    reg               d_active_r;
@@ -118,7 +123,7 @@ module lisa_dbg
    assign d_access = (dbg_we | dbg_rd) && dbg_a == 8'h6 && halted;
    assign d_active = (dbg_we | dbg_rd) && dbg_a[7:4] == 4'h0;
    assign dbg_halted = halted;
-   assign dbg_ready = (d_active & !d_active_r) ? 1'b0 : d_access ? (delay == 2'h0) : d_active;
+   assign dbg_ready = (d_active & !d_active_r) ? 1'b0 : d_access ? ((delay == 2'h0) | d_periph) : d_active;
 
    always @(posedge clk)
    begin
@@ -131,12 +136,14 @@ module lisa_dbg
          access_state <= 2'h0;
          d_access_r <= 1'b0;
          d_active_r <= 1'b0;
-//         for (i = 0; i < DBG_BRKPOINTS; i = i + 1)
-//            brk_r[i] <= {(PC_BITS+1){1'b0}};
          brk_r0 <= 16'h0;
          brk_r1 <= 16'h0;
          brk_r2 <= 16'h0;
          brk_r3 <= 16'h0;
+`ifdef SIX_BREAK
+         brk_r4 <= 16'h0;
+         brk_r5 <= 16'h0;
+`endif
          //d_we   <= 1'b0;
          d_rd   <= 1'b0;
       end
@@ -177,12 +184,12 @@ module lisa_dbg
                brk_r2 <= dbg_di[PC_BITS:0];
             if (dbg_a[2:0] == 3'h3)
                brk_r3 <= dbg_di[PC_BITS:0];
-
-//            for (i = 0; i < DBG_BRKPOINTS; i++)
-//            begin : GEN_BRK
-//               if (dbg_a[2:0] == i)
-//                  brk_r[i][PC_BITS:0] <= dbg_di[PC_BITS:0];   
-//            end
+`ifdef SIX_BREAK
+            if (dbg_a[2:0] == 3'h4)
+               brk_r4 <= dbg_di[PC_BITS:0];
+            if (dbg_a[2:0] == 3'h5)
+               brk_r5 <= dbg_di[PC_BITS:0];
+`endif
          end
 
          // Data bus register write
@@ -210,8 +217,6 @@ module lisa_dbg
 
             2'h2:
             begin
-//               if (dbg_we)
-//                  d_we <= 1'b1;
                access_state <= 2'h3;
             end
 
@@ -219,7 +224,6 @@ module lisa_dbg
             begin
                if (delay != 2'h0)
                   delay <= delay - 1;
-//               d_we <= 1'b0;
                if (dbg_rd == 0 && dbg_we == 0)
                begin
                   d_rd <= 1'b0;
@@ -239,6 +243,10 @@ module lisa_dbg
    assign brk_r[1] = brk_r1;
    assign brk_r[2] = brk_r2;
    assign brk_r[3] = brk_r3;
+`ifdef SIX_BREAK
+   assign brk_r[4] = brk_r4;
+   assign brk_r[5] = brk_r5;
+`endif
    always @*
    begin
       brk_halt = 1'b0;
@@ -274,7 +282,11 @@ module lisa_dbg
          15:   dbg_do = inst;
          default:
             if (dbg_a[3])
+`ifdef SIX_BREAK
                dbg_do = brk_r[dbg_a[1:0]];
+`else
+               dbg_do = brk_r[dbg_a[2:0]];
+`endif
          endcase
       end
    end

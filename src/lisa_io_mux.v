@@ -124,11 +124,11 @@ module lisa_io_mux
    input  wire [3:0]       sio_oe,              // QUAD output enable controls
 
    // LISA peripheral Port signals
-   input  wire [7:0]       lisa_porta_i,        // Outputs from Port A peripheral
    output wire [7:0]       lisa_porta_o,        // Inputs to Port A peripheral
-   input  wire [3:0]       lisa_portb_i,        // Outputs from Port A peripheral
-   input  wire [3:0]       lisa_portb_dir_i,    // Port B direction register
-   output wire [3:0]       lisa_portb_o,        // Inputs to Port A peripheral
+   input  wire [7:0]       lisa_portb_i,        // Outputs from Port B peripheral
+   input  wire [3:0]       lisa_portc_i,        // Outputs from Port C peripheral
+   input  wire [3:0]       lisa_portc_dir_i,    // Port C direction register
+   output wire [3:0]       lisa_portc_o,        // Inputs to Port C peripheral
 
    // UART signals
    input  wire             baud_ref,            // Baud rate reference clock
@@ -191,14 +191,14 @@ module lisa_io_mux
       if (i == 4)
       begin : GEN_OUT4
       assign out_mux[i] = (out_mux_sel[i] == 2'h0 || rx_sel == 2'h1) ? out_default[i] :
-                          out_mux_sel[i] == 2'h1 ? lisa_porta_i[i] :
+                          out_mux_sel[i] == 2'h1 ? lisa_portb_i[i] :
                           out_mux_sel[i] == 2'h2 ? periph_sel1[i] :
                                                    periph_sel2[i];
       end
       else
       begin : GEN_OTHERS
       assign out_mux[i] = out_mux_sel[i] == 2'h0 ? out_default[i] :
-                          out_mux_sel[i] == 2'h1 ? lisa_porta_i[i] :
+                          out_mux_sel[i] == 2'h1 ? lisa_portb_i[i] :
                           out_mux_sel[i] == 2'h2 ? periph_sel1[i] :
                                                    periph_sel2[i];
       end
@@ -240,7 +240,7 @@ module lisa_io_mux
    // Assign the Lisa Port A inputs from the Tiny Tapeout inputs
    // ==============================================================
    assign lisa_porta_o = ui_in;
-   assign lisa_portb_o = uio_in[7:4];
+   assign lisa_portc_o = uio_in[7:4];
 
    // Assign uio_out signals
    assign uio_out[4:0] = s_uio_out[4:0];
@@ -265,7 +265,7 @@ module lisa_io_mux
 
       // UIO bit 4
       case (io_mux_bits[1:0])
-         2'h1:    s_uio_out[4] = lisa_portb_i[0];
+         2'h1:    s_uio_out[4] = lisa_portc_i[0];
          2'h2:    s_uio_out[4] = scl_pad_o;
          2'h3:    s_uio_out[4] = sda_pad_o;
          default: s_uio_out[4] = 1'b0;
@@ -273,7 +273,7 @@ module lisa_io_mux
 
       // UIO bit 5
       case (io_mux_bits[3:2])
-         2'h1:    s_uio_out[5] = lisa_portb_i[1];
+         2'h1:    s_uio_out[5] = lisa_portc_i[1];
          2'h2:    s_uio_out[5] = sda_pad_o;
          2'h3:    s_uio_out[5] = scl_pad_o;
          default: s_uio_out[5] = 1'b0;
@@ -282,7 +282,7 @@ module lisa_io_mux
       // UIO bit 6
       case (io_mux_bits[5:4])
          2'h0:    s_uio_out[6] = scl_pad_o;
-         2'h1:    s_uio_out[6] = lisa_portb_i[2];
+         2'h1:    s_uio_out[6] = lisa_portc_i[2];
          2'h2:    s_uio_out[6] = sio2_o;
          2'h3:    s_uio_out[6] = sio2_o;
       endcase
@@ -290,7 +290,7 @@ module lisa_io_mux
       // UIO bit 7
       case (io_mux_bits[7:6])
          2'h0:    s_uio_out[7] = sda_pad_o;
-         2'h1:    s_uio_out[7] = lisa_portb_i[3];
+         2'h1:    s_uio_out[7] = lisa_portc_i[3];
          2'h2:    s_uio_out[7] = sio3_o;
          2'h3:    s_uio_out[7] = sio3_o;
       endcase
@@ -306,7 +306,7 @@ module lisa_io_mux
 
       // UIO bit 4
       case (io_mux_bits[1:0])
-         2'h1:    s_uio_oe[4] = lisa_portb_dir_i[0];
+         2'h1:    s_uio_oe[4] = lisa_portc_dir_i[0];
          2'h2:    s_uio_oe[4] = scl_padoen_o;
          2'h3:    s_uio_oe[4] = sda_padoen_o;
          default: s_uio_oe[4] = 1'b0;
@@ -314,7 +314,7 @@ module lisa_io_mux
 
       // UIO bit 5
       case (io_mux_bits[3:2])
-         2'h1:    s_uio_oe[5] = lisa_portb_dir_i[1];
+         2'h1:    s_uio_oe[5] = lisa_portc_dir_i[1];
          2'h2:    s_uio_oe[5] = sda_padoen_o;
          2'h3:    s_uio_oe[5] = scl_padoen_o;
          default: s_uio_oe[5] = 1'b0;
@@ -323,7 +323,7 @@ module lisa_io_mux
       // UIO bit 6
       case (io_mux_bits[5:4])
          2'h0:    s_uio_oe[6] = scl_padoen_o;
-         2'h1:    s_uio_oe[6] = lisa_portb_dir_i[2];
+         2'h1:    s_uio_oe[6] = lisa_portc_dir_i[2];
          2'h2:    s_uio_oe[6] = sio_oe[2];            // DQ2
          2'h3:    s_uio_oe[6] = sio_oe[2];
       endcase
@@ -331,7 +331,7 @@ module lisa_io_mux
       // UIO bit 7
       case (io_mux_bits[7:6])
          2'h0:    s_uio_oe[7] = sda_padoen_o;
-         2'h1:    s_uio_oe[7] = lisa_portb_dir_i[3];
+         2'h1:    s_uio_oe[7] = lisa_portc_dir_i[3];
          2'h2:    s_uio_oe[7] = sio_oe[3];            // DQ3
          2'h3:    s_uio_oe[7] = sio_oe[3];
       endcase

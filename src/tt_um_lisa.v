@@ -36,24 +36,24 @@ SUCH DAMAGE.
 //                          |     tt_um_lisa         |
 //          On              |                        |
 //         Reset            |ui_in             uo_out|
-//           |          pa0 | 0                    0 | pa0
-//           |          pa1 | 1                    1 | pa1
-//     baud  |          pa2 | 2                    2 | pa2
-//      div -+     rx / pa3 | 3                    3 | pa3
-//           |          pa4 | 4                    4 | pa4 / tx
-//           |          pa5 | 5                    5 | pa5
-//           |          pa6 | 6                    6 | pa6
-//           baud_set / pa7 | 7                    7 | pa7 / baud_ref
+//           |          pa0 | 0                    0 | pb0
+//           |          pa1 | 1                    1 | pb1
+//     baud  |          pa2 | 2                    2 | pb2
+//      div -+     rx / pa3 | 3                    3 | pb3
+//           |          pa4 | 4                    4 | pb4 / tx
+//           |          pa5 | 5                    5 | pb5
+//           |          pa6 | 6                    6 | pb6
+//           baud_set / pa7 | 7                    7 | pb7 / baud_ref
 //                          |                        |
 //                          |                   uio  |
 //                          |                      0 | cs    / ce_latch
 //                          |                      1 | mosi  / dq1 / ce0
 //                          |                      2 | miso  / dq2 / ce1
 //                          |                      3 | sclk
-//                          |                      4 | scl / rx  / portb_io[0]
-//                          |                      5 | sda / tx  / portb_io[1]
-//                          |                      6 | scl / dq3 / portb_io[2] / rx
-//                          |                      7 | sda / dp4 / portb_io[3]
+//                          |                      4 | scl / rx  / portc_io[0]
+//                          |                      5 | sda / tx  / portc_io[1]
+//                          |                      6 | scl / dq3 / portc_io[2] / rx
+//                          |                      7 | sda / dp4 / portc_io[3]
 //                          |                        |
 //                          +------------------------+
 //
@@ -153,11 +153,11 @@ module tt_um_lisa
    // ==========================================================================
    // Lisa Peripheral signals
    // ==========================================================================
-   wire    [7:0]        porta;
    wire    [7:0]        porta_in;   
-   wire    [3:0]        portb;
-   wire    [3:0]        portb_in;
-   wire    [3:0]        portb_dir;
+   wire    [7:0]        portb;
+   wire    [3:0]        portc;
+   wire    [3:0]        portc_in;
+   wire    [3:0]        portc_dir;
 
    // ==========================================================================
    // Lisa UART signals
@@ -491,11 +491,11 @@ module tt_um_lisa
       .d_rd                      ( d_rd                      ),
                                                              
       // GPIO signals                                        
-      .porta                     ( porta                     ),
       .porta_in                  ( porta_in                  ),
       .portb                     ( portb                     ),
-      .portb_in                  ( portb_in                  ),
-      .portb_dir                 ( portb_dir                 ),
+      .portc                     ( portc                     ),
+      .portc_in                  ( portc_in                  ),
+      .portc_dir                 ( portc_dir                 ),
                                                              
       // UART signals                                        
       .uart_tx_d                 ( lisa_tx_d                 ),
@@ -806,11 +806,11 @@ module tt_um_lisa
       .sio_oe                    ( sio_oe                    ),
 
       // Lisa parallel port signals
-      .lisa_porta_i              ( porta                     ),
       .lisa_porta_o              ( porta_in                  ),
       .lisa_portb_i              ( portb                     ),
-      .lisa_portb_dir_i          ( portb_dir                 ),
-      .lisa_portb_o              ( portb_in                  ),
+      .lisa_portc_i              ( portc                     ),
+      .lisa_portc_dir_i          ( portc_dir                 ),
+      .lisa_portc_o              ( portc_in                  ),
                                                              
       // UART inputs                                         
       .baud_ref                  ( baud_ref                  ),

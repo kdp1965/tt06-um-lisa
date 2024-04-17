@@ -38,14 +38,10 @@ Address Map:
 
    GPIO
    ====
-   0x00:       PORT A input / output
-   0x01:       PORT A direction (1 = output)
-   0x02:       PORT B input / output
-   0x03:       PORT B direction (1 = output)
-   0x04:       PORT C input / output
-   0x05:       PORT C direction (1 = output)
-   0x06:       PORT D input / output
-   0x07:       PORT D direction (1 = output)
+   0x00:       PORT A input
+   0x01:       PORT B output
+   0x02:       PORT C input / output
+   0x03:       PORT C direction (1 = output)
 
    TIMER
    =====
@@ -87,11 +83,11 @@ module lisa_periph
    output wire [7:0]    d_o,
 
    // GPIO
-   output reg [7:0]     porta,
    input  wire [7:0]    porta_in,
-   output reg [3:0]     portb,
-   input  wire [3:0]    portb_in,
-   output reg [3:0]     portb_dir,
+   output reg  [7:0]    portb,
+   output reg  [3:0]    portc,
+   input  wire [3:0]    portc_in,
+   output reg  [3:0]    portc_dir,
 
    // UART
    output wire [7:0]    uart_tx_d,
@@ -128,9 +124,7 @@ module lisa_periph
    reg                  ms2_rollover;
 `endif
 
-   reg   [7:0]          porta_dir;
-   wire  [7:0]          porta_read;
-   wire  [3:0]          portb_read;
+   wire  [3:0]          portc_read;
    reg   [7:0]          d_o_r;
    wire  [7:0]          i2c_d_o;
 
@@ -138,10 +132,9 @@ module lisa_periph
    begin
       if (~rst_n)
       begin
-         porta       <= 8'h00;
-         porta_dir   <= 8'h00;
-         portb       <= 4'h00;
-         portb_dir   <= 4'h0;
+         portb       <= 8'h00;
+         portc       <= 4'h00;
+         portc_dir   <= 4'h0;
          ms_prediv   <= 16'd29494;
          ms_count    <= 16'h0;
          ms_timer    <= 16'h0;
@@ -164,21 +157,17 @@ module lisa_periph
          // ==============================================
          // GPIO signals
          // ==============================================
-         // Latch input data as PORTA
-         if (d_periph && d_we && d_addr == 7'h00)
-            porta <= d_i;
-
-         // Latch input data as PORTA_DIR
-         if (d_periph && d_we && d_addr == 7'h01)
-            porta_dir <= d_i;
-
          // Latch input data as PORTB
-         if (d_periph && d_we && d_addr == 7'h02)
-            portb <= d_i[3:0];
+         if (d_periph && d_we && d_addr == 7'h01)
+            portb <= d_i;
 
-         // Latch input data as PORTB_DIR
+         // Latch input data as PORTC
+         if (d_periph && d_we && d_addr == 7'h02)
+            portc <= d_i[3:0];
+
+         // Latch input data as PORTC_DIR
          if (d_periph && d_we && d_addr == 7'h03)
-            portb_dir <= d_i[3:0];
+            portc_dir <= d_i[3:0];
 
          // ==============================================
          // Timer signals
@@ -321,13 +310,9 @@ module lisa_periph
    // ==============================================
    generate
    genvar x;
-   for (x = 0; x < 8; x = x + 1)
-   begin
-      assign porta_read[x] = porta_dir[x] ? porta[x] : porta_in[x];
-   end
    for (x = 0; x < 4; x = x + 1)
    begin
-      assign portb_read[x] = portb_dir[x] ? portb[x] : portb_in[x];
+      assign portc_read[x] = portc_dir[x] ? portc[x] : portc_in[x];
    end
    endgenerate 
 
@@ -335,10 +320,10 @@ module lisa_periph
    begin
       case (d_addr)
       // GPIO readback
-      7'h00:   d_o_r = porta_read;
-      7'h01:   d_o_r = porta_dir;
-      7'h02:   d_o_r = {4'h0, portb_read};
-      7'h03:   d_o_r = {4'h0, portb_dir};
+      7'h00:   d_o_r = porta_in;
+      7'h01:   d_o_r = portb;
+      7'h02:   d_o_r = {4'h0, portc_read};
+      7'h03:   d_o_r = {4'h0, portc_dir};
 
       // Timer readback
       7'h08:   d_o_r = ms_prediv[7:0];

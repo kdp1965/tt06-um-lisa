@@ -32,36 +32,34 @@ SUCH DAMAGE.
 // I/O Usage:
 //
 //
-//                 +------------------------+
-//                 |     tt_um_lisa         |
-//                 |                        |
-//                 |ui_in             uo_out|
-//        |        | 0                    0 |
-//        |        | 1                    1 |
-//  baud  |        | 2                    2 |
-//   val -+   rx   | 3                    3 |
-//        |        | 4                    4 | tx
-//        |        | 5                    5 |
-//        |        | 6                    6 |
-//        baud_set | 7                    7 |
-//                 |                        |
-//                 |                   uio  |
-//                 |                      0 |
-//                 |                      1 |
-//                 |                      2 |   FSM
-//                 |                      3 |   I/O
-//                 |                      4 |
-//                 |                      5 |
-//                 |                      6 |
-//                 |                      7 |
-//                 |                        |
-//                 +------------------------+
+//                          +------------------------+
+//                          |     tt_um_lisa         |
+//          On              |                        |
+//         Reset            |ui_in             uo_out|
+//           |          pa0 | 0                    0 | pa0
+//           |          pa1 | 1                    1 | pa1
+//     baud  |          pa2 | 2                    2 | pa2
+//      div -+     rx / pa3 | 3                    3 | pa3
+//           |          pa4 | 4                    4 | pa4 / tx
+//           |          pa5 | 5                    5 | pa5
+//           |          pa6 | 6                    6 | pa6
+//           baud_set / pa7 | 7                    7 | pa7 / baud_ref
+//                          |                        |
+//                          |                   uio  |
+//                          |                      0 | cs    / ce_latch
+//                          |                      1 | mosi  / dq1 / ce0
+//                          |                      2 | miso  / dq2 / ce1
+//                          |                      3 | sclk
+//                          |                      4 | scl / rx  / portb_io[0]
+//                          |                      5 | sda / tx  / portb_io[1]
+//                          |                      6 | scl / dq3 / portb_io[2] / rx
+//                          |                      7 | sda / dp4 / portb_io[3]
+//                          |                        |
+//                          +------------------------+
 //
 //
-//   ui:
-//      3: Debug RX
-//
-//      7: HIGH to sample ui[6:0] as BAUD divider at reset.
+//   ui: Sampled at reset
+//      7: HIGH to sample ui[6:0] as BAUD divider at reset and disable AutoBaud
 //    6-0: When [7] is HIGH at reset, sets the UART BAUD divider.
 //
 // ==============================================================================
@@ -299,6 +297,13 @@ module tt_um_lisa
       end
    end
    
+   wire [7:0]  d_o_c;
+   wire [14:0] d_addr_c;
+   wire        d_valid_c;
+   wire        d_we_c;
+   wire        d_rd_c;
+   wire        d_periph_c;
+
    // ==========================================================================
    // Instantiate the Lisa Processor Core
    // ==========================================================================
@@ -319,12 +324,12 @@ module tt_um_lisa
                                                              
       // Data bus                                            
       .d_i                       ( d_i                       ),
-      .d_o                       ( d_o                       ),
-      .d_addr                    ( d_addr                    ),
-      .d_periph                  ( d_periph                  ),
-      .d_we                      ( d_we                      ),
-      .d_rd                      ( d_rd                      ),
-      .d_valid                   ( d_valid                   ),
+      .d_o                       ( d_o_c                     ),
+      .d_addr                    ( d_addr_c                  ),
+      .d_periph                  ( d_periph_c                ),
+      .d_we                      ( d_we_c                    ),
+      .d_rd                      ( d_rd_c                    ),
+      .d_valid                   ( d_valid_c                 ),
       .d_ready                   ( d_ready                   ),
                                                              
       // Debug bus                                           
@@ -336,6 +341,45 @@ module tt_um_lisa
       .dbg_ready                 ( dbg_ready_lisa            ),
       .dbg_halted                ( dbg_halted                )
    );
+
+   // ==========================================================================
+   // Register the LISA core data bus output to improve timing
+   // ==========================================================================
+   reg [7:0]  d_o_r;
+   reg [14:0] d_addr_r;
+   reg        d_valid_r;
+   reg        d_we_r;
+   reg        d_rd_r;
+   reg        d_periph_r;
+
+   always @(posedge clk)
+   begin
+      if (~rst_n)
+      begin
+         d_o_r       <= 8'h0;
+         d_addr_r    <= 15'h0;
+         d_valid_r   <= 1'b0;
+         d_we_r      <= 1'b0;
+         d_rd_r      <= 1'b0;
+         d_periph_r  <= 1'b0;
+      end
+      else
+      begin
+         d_o_r       <= d_o_c;
+         d_addr_r    <= d_addr_c;
+         d_valid_r   <= d_valid_c;
+         d_we_r      <= d_we_c;
+         d_rd_r      <= d_rd_c;
+         d_periph_r  <= d_periph_c;
+      end
+   end
+
+   assign d_o      = d_o_r;
+   assign d_addr   = d_addr_r;
+   assign d_valid  = d_valid_r;
+   assign d_we     = d_we_r;
+   assign d_rd     = d_rd_r;
+   assign d_periph = d_periph_r;
 
    // ==========================================================================
    // Instantiate the INST CACHE controller

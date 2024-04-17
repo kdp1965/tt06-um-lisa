@@ -189,6 +189,7 @@ module lisa_core
    localparam  D_STCK = D_BITS > 9 ? 9 : D_BITS;
 
    reg  [`PWORD_SIZE-1:0]     inst_r;
+   (* keep = "true" *)
    wire [`PWORD_SIZE-1:0]     inst;
    (* keep = "true" *)
    reg  [7:0]                 acc;
@@ -313,6 +314,7 @@ module lisa_core
    wire                       op_ldz;
    wire                       op_brk;
    wire                       op_notz;
+   (* keep="true" *)
    wire                       op_div_start;
    wire                       op_add;
    wire                       op_sub;
@@ -320,7 +322,10 @@ module lisa_core
    wire                       op_or;
    wire                       op_xor;
    wire                       op_ldax;
+   reg   [1:0]                div_args;
+   (* keep = "true" *)
    wire  [15:0]               div_divisor;
+   (* keep = "true" *)
    wire  [15:0]               div_dividend;
    wire  [15:0]               div_result;
    wire                       div_ready;
@@ -417,8 +422,8 @@ module lisa_core
    assign op_rem      = WANT_DIV ? inst[`PWORD_SIZE-1 -: 12] == 12'b10_1000_110001 : 1'b0;
    assign op_any_div  = op_div | op_rem;
    assign op_div_start = ((op_any_div & inst[0] & cond[0]) | div_stage_two | rem_stage_two) & exec_state & d_ok;
-   assign div_divisor  = {inst[0] ? (amode[1] ? {8{acc[7]}} : 8'h00) : d_i, acc};
-   assign div_dividend = {inst[1] ? (amode[1] ? {8{ix[7]}}  : 8'h00) : ra[7:0], ix[7:0]};
+   assign div_divisor  = {div_args[0] ? (amode[1] ? {8{acc[7]}} : 8'h00) : d_i, acc};
+   assign div_dividend = {div_args[1] ? (amode[1] ? {8{ix[7]}}  : 8'h00) : ra[7:0], ix[7:0]};
 
    assign pc_inc   = pc + {{(PC_BITS-1){1'b0}}, 1'b1};
    assign pc_rel   = pc + {{(PC_BITS-11){inst[10]}}, inst[10:0]};
@@ -542,6 +547,9 @@ module lisa_core
    begin
       acc_load_val = {1'b0, 8'bx};
 
+      if ((div_stage_two | rem_stage_two) & div_ready)
+         acc_load_val = {1'b1, div_result[7:0]};
+      else
       casez (inst[`PWORD_SIZE-1 -: 6])
       6'b100000:   acc_load_val = {1'b1, inst[7:0]};
       6'b100011:   acc_load_val = {1'b1, inst[7:0]};
@@ -1014,6 +1022,7 @@ module lisa_core
          lddiv_stage_two <= 1'b0;
          div_stage_two <= 1'b0;
          rem_stage_two <= 1'b0;
+         div_args      <= 2'h0;
       end
       else
       begin
@@ -1034,6 +1043,10 @@ module lisa_core
             rem_stage_two <= 1'b0;
          else if (exec_state && cond[0] && op_rem & inst[0] == 1'b0)
             rem_stage_two <= 1'b1;
+
+         // Save div args
+         if (decode_state && cond[0] && op_any_div)
+            div_args <= inst[1:0];
       end
    end
 

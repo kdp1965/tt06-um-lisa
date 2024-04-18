@@ -303,6 +303,7 @@ module tt_um_lisa
    wire        d_we_c;
    wire        d_rd_c;
    wire        d_periph_c;
+   wire        d_addr_good;
 
    // ==========================================================================
    // Instantiate the Lisa Processor Core
@@ -330,7 +331,7 @@ module tt_um_lisa
       .d_we                      ( d_we_c                    ),
       .d_rd                      ( d_rd_c                    ),
       .d_valid                   ( d_valid_c                 ),
-      .d_ready                   ( d_ready                   ),
+      .d_ready                   ( d_ready & d_addr_good     ),
                                                              
       // Debug bus                                           
       .dbg_a                     ( dbg_a                     ),
@@ -351,6 +352,8 @@ module tt_um_lisa
    reg        d_we_r;
    reg        d_rd_r;
    reg        d_periph_r;
+
+   assign d_addr_good = d_addr_c == d_addr_r;
 
    always @(posedge clk)
    begin

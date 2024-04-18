@@ -267,7 +267,7 @@ module lisa_io_mux
       case (io_mux_bits[1:0])
          2'h1:    s_uio_out[4] = lisa_portc_i[0];
          2'h2:    s_uio_out[4] = scl_pad_o;
-         2'h3:    s_uio_out[4] = sda_pad_o;
+         2'h3:    s_uio_out[4] = ce[1];
          default: s_uio_out[4] = 1'b0;
       endcase
 
@@ -275,7 +275,7 @@ module lisa_io_mux
       case (io_mux_bits[3:2])
          2'h1:    s_uio_out[5] = lisa_portc_i[1];
          2'h2:    s_uio_out[5] = sda_pad_o;
-         2'h3:    s_uio_out[5] = scl_pad_o;
+         2'h3:    s_uio_out[5] = 1'b0;
          default: s_uio_out[5] = 1'b0;
       endcase
 
@@ -299,7 +299,7 @@ module lisa_io_mux
    // Assign uio_oe Output Enables
    always @*
    begin
-      s_uio_oe[0] = 1'b1;                // CE
+      s_uio_oe[0] = 1'b1;                // CE[0]
       s_uio_oe[1] = ce_latch ? 1'b1 : sio_oe[0];           // MOSI
       s_uio_oe[2] = ce_latch ? 1'b1 : sio_oe[1];           // MOSI
       s_uio_oe[3] = 1'b1;                // SCLK
@@ -308,7 +308,7 @@ module lisa_io_mux
       case (io_mux_bits[1:0])
          2'h1:    s_uio_oe[4] = lisa_portc_dir_i[0];
          2'h2:    s_uio_oe[4] = scl_padoen_o;
-         2'h3:    s_uio_oe[4] = sda_padoen_o;
+         2'h3:    s_uio_oe[4] = 1'b1;  // CE[1]
          default: s_uio_oe[4] = 1'b0;
       endcase
 
@@ -316,7 +316,7 @@ module lisa_io_mux
       case (io_mux_bits[3:2])
          2'h1:    s_uio_oe[5] = lisa_portc_dir_i[1];
          2'h2:    s_uio_oe[5] = sda_padoen_o;
-         2'h3:    s_uio_oe[5] = scl_padoen_o;
+         2'h3:    s_uio_oe[5] = 1'b0;
          default: s_uio_oe[5] = 1'b0;
       endcase
 

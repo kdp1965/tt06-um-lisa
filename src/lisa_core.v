@@ -95,7 +95,7 @@ Uses a 14 (or 16) bit program word.  Shown is the 14-bit version.  For 16-bit, e
   Register push/pop
 
   Relative branch
-    10 101b bbbbbbbb   bnz   #imm9          Branch (+255 / -256) if zflag == 0
+    10 101b bbbbbbbb   bz    #imm9          Branch (+255 / -256) if zflag == 0
     10 110b bbbbbbbb   br    #imm9          Branch (+255 / -256)
     10 111b bbbbbbbb   bnz   #imm9          Branch (+255 / -256) if zflag != 0
 
@@ -354,8 +354,8 @@ module lisa_core
 
    assign jump_taken =  inst[`PWORD_SIZE-1]      == 1'b0;                        // JMP
    assign br_taken   = (inst[`PWORD_SIZE-1 -: 5] == 5'b10110)               ||   // BR
-                       (inst[`PWORD_SIZE-1 -: 5] == 5'b10101 && zflag == 0) ||   // BZ
-                       (inst[`PWORD_SIZE-1 -: 5] == 5'b10111 && zflag != 0);     // BNZ
+                       (inst[`PWORD_SIZE-1 -: 5] == 5'b10101 && zflag != 1) ||   // BNZ
+                       (inst[`PWORD_SIZE-1 -: 5] == 5'b10111 && zflag == 1);     // BZ
    assign ret_taken = ((inst[`PWORD_SIZE-1 -: 6] == 6'b100011) ||
                        (inst[`PWORD_SIZE-1 -: 9] == 9'b100010100) ||
                        (inst[`PWORD_SIZE-1 -: 9] == 9'b100010110 && cflag == 1) ||

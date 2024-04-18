@@ -172,10 +172,6 @@ module lisa_io_mux
    // ==========================================================================
    // Assign the RX receive pin
    // ==========================================================================
-   //assign debug_rx = rx_sel == 2'h1 ? ui_in[3] :      // Input from RP2040
-   //                  rx_sel == 2'h2 ? uio_in[6] :     // Input from PMOD UART
-   //                  rx_sel == 2'h3 ? uio_in[4] :     // Input from PMOD Custom board
-   //                  1'b1;                            // No RX data
    assign debug_rx = rx_sel == 2'h1 ? rx1 :           // Input from RP2040
                      rx_sel == 2'h2 ? rx2 :           // Input from PMOD UART
                      rx_sel == 2'h3 ? rx3 :           // Input from PMOD Custom board
@@ -341,11 +337,9 @@ module lisa_io_mux
    // Assign I2C inputs
    // ==========================================================================
    assign scl_pad_i = io_mux_bits[1:0] == 2'h2 ? uio_in[4] :
-                      io_mux_bits[1:0] == 2'h3 ? uio_in[5] :
                       io_mux_bits[5:4] == 2'h0 ? uio_in[6] :
                       1'b1;
    assign sda_pad_i = io_mux_bits[3:2] == 2'h2 ? uio_in[5] :
-                      io_mux_bits[3:2] == 2'h3 ? uio_in[4] :
                       io_mux_bits[7:6] == 2'h0 ? uio_in[7] :
                       1'b1;
 

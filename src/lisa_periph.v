@@ -127,6 +127,8 @@ module lisa_periph
    wire  [3:0]          portc_read;
    reg   [7:0]          d_o_r;
    wire  [7:0]          i2c_d_o;
+   wire                 sda_oen_n;
+   wire                 scl_oen_n;
 
    always @(posedge clk)
    begin
@@ -372,11 +374,13 @@ module lisa_periph
       .d_o          ( i2c_d_o      ),
       .scl_pad_i    ( scl_pad_i    ),
       .scl_pad_o    ( scl_pad_o    ),
-      .scl_padoen_o ( scl_padoen_o ),
+      .scl_padoen_o ( scl_oen_n    ),
       .sda_pad_i    ( sda_pad_i    ),
       .sda_pad_o    ( sda_pad_o    ),
-      .sda_padoen_o ( sda_padoen_o )
+      .sda_padoen_o ( sda_oen_n    )
    );
+   assign scl_padoen_o  = ~scl_oen_n;
+   assign sda_padoen_o  = ~sda_oen_n;
 
    assign d_o = d_o_r | i2c_d_o;
 endmodule

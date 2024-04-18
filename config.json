@@ -72,6 +72,8 @@
   "ROUTING_CORES": 8,
   "PL_TARGET_DENSITY_PCT": 70,
   "GRT_ALLOW_CONGESTION" : true,
+  "PL_RESIZER_MAX_SLEW_MARGIN" : 20.0,
+  "GLB_RESIZER_MAX_SLEW_MARGIN" : 20.0,
 
   "//": "reduce wasted space",
   "TOP_MARGIN_MULT": 1,

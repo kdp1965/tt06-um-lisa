@@ -52,7 +52,7 @@ Debug module:
 
 ==========================================================================================
 */
-`define SIX_BREAK
+//`define SIX_BREAK
 
 module lisa_dbg
 #(

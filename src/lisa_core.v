@@ -96,12 +96,13 @@ Uses a 14 (or 16) bit program word.  Shown is the 14-bit version.  For 16-bit, e
   Floating Point ops
     10 1000 01111000 0h tfa                 Transfer facc (half) to acc
     10 1000 01111000 1h taf                 Transfer a to facc (half)
-    10 1000 01111010 ff fmul                Float mult facc * fx.  Result in facc
-    10 1000 01111011 ff fadd                Float add  facc + fx.  Result in facc
-    10 1000 01111100 ff fneg                Negate fx.  Result in fx
-    10 1000 01111101 ff fswqp               Swap facc and fx.
+
+    10 1000 01111001 ff fmul                Float mult facc * fx.  Result in facc
+    10 1000 01111010 ff fadd                Float add  facc + fx.  Result in facc
+    10 1000 01111011 ff fneg                Negate fx.  Result in fx
+    10 1000 01111100 ff fswqp               Swap facc and fx.
+    10 1000 01111101 ff fcmp                Compare facc and fx
     10 1000 01111110 ff fdiv                Divide facc / fx (reserved for future, not implemented yet)
-    10 1000 01111111 ff fcmp                Compare facc and fx
     10 1000 1100100000  itof                Convert 16-bit facc to bfloat facc
     10 1000 1100110001  ftoi                Convert 16-bit facc to bfloat facc
 
@@ -341,6 +342,7 @@ module lisa_core
    wire                       op_fneg;
    wire                       op_fswap;
    wire                       op_itof;
+   wire                       op_fcmp;
    reg   [15:0]               facc;
    reg   [15:0]               f0;
    reg   [15:0]               f1;
@@ -452,6 +454,7 @@ module lisa_core
    assign op_fadd     = inst[`PWORD_SIZE-1 -: 14] == 14'b10100001111010;
    assign op_fneg     = inst[`PWORD_SIZE-1 -: 14] == 14'b10100001111011;
    assign op_fswap    = inst[`PWORD_SIZE-1 -: 14] == 14'b10100001111100;
+   assign op_fcmp     = inst[`PWORD_SIZE-1 -: 14] == 14'b10100001111101;
    assign op_itof     = inst[`PWORD_SIZE-1 -: 14] == 14'b10100011001000;
 `endif
    assign op_brk      = WANT_DBG ? inst[`PWORD_SIZE-1 -: 14] == 14'b10100000011111 : 1'b0;
@@ -622,7 +625,14 @@ module lisa_core
                    inst[`PWORD_SIZE-1 -: 6]  == 6'b111001 ||         // inx
                    inst[`PWORD_SIZE-1 -: 12] == 12'b101000000000 ||  // shl,shr,ldc
                    inst[`PWORD_SIZE-1 -: 12] == 12'b100010101101 ||  // cpx
-                   op_restc;                                         // Restore c
+                   op_restc ||                                       // Restore c
+                   op_fcmp;                                          // Floating point compare
+
+   // Sign wires for facc and fx
+   wire  s_facc;
+   wire  s_fx;
+   assign s_facc = facc[15];
+   assign s_fx   = fx[inst[1:0]][15];
 
    // Create value to load to cflag
    always @*
@@ -659,6 +669,21 @@ module lisa_core
             // restc
             else if (op_restc)
                c_val = cflag_save;
+
+            // fcmp  Test if facc > fx
+            else if (op_fcmp)
+            begin
+               if ((~s_facc & s_fx)                   ||          // If facc positive and fx negative
+                   (~s_facc && ~s_fx &&                           // Both positive and facc > fx
+                    facc[14:0] > fx[inst[1:0]][14:0]) ||
+                   (s_facc && s_fx &&                             // Both negative and facc < fx
+                    facc[14:0] < fx[inst[1:0]][14:0]))
+               begin
+                  c_val = 1'b1;
+               end
+               else
+                  c_val = 1'b0;
+            end
          end
       5'b10001:                          // cpx
          case (1'b1)
@@ -1231,6 +1256,7 @@ module lisa_core
                                                                (inst[0] ? cflag : ~zflag) :
                                                                 inst[0]};
                op_notz:             {zflag_load, zflag_val} = {1'b1, acc != 8'h00};
+               op_fcmp:             {zflag_load, zflag_val} = {1'b1, facc == fx[inst[1:0]]};
             endcase
       end
    end

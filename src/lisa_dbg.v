@@ -283,9 +283,9 @@ module lisa_dbg
          default:
             if (dbg_a[3])
 `ifdef SIX_BREAK
-               dbg_do = brk_r[dbg_a[1:0]];
-`else
                dbg_do = brk_r[dbg_a[2:0]];
+`else
+               dbg_do = brk_r[dbg_a[1:0]];
 `endif
          endcase
       end

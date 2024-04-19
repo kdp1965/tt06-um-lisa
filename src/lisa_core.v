@@ -100,6 +100,10 @@ Uses a 14 (or 16) bit program word.  Shown is the 14-bit version.  For 16-bit, e
     10 1000 01111011 ff fadd                Float add  facc + fx.  Result in facc
     10 1000 01111100 ff fneg                Negate fx.  Result in fx
     10 1000 01111101 ff fswqp               Swap facc and fx.
+    10 1000 01111110 ff fdiv                Divide facc / fx (reserved for future, not implemented yet)
+    10 1000 01111111 ff fcmp                Compare facc and fx
+    10 1000 1100100000  itof                Convert 16-bit facc to bfloat facc
+    10 1000 1100110001  ftoi                Convert 16-bit facc to bfloat facc
 
   Relative branch
     10 101b bbbbbbbb   bz    #imm9          Branch (+255 / -256) if zflag == 0
@@ -331,12 +335,12 @@ module lisa_core
    wire                       op_xor;
    wire                       op_ldax;
 `ifdef WANT_BF16
-   wire                       op_tfa;
    wire                       op_taf;
    wire                       op_fmul;
    wire                       op_fadd;
    wire                       op_fneg;
    wire                       op_fswap;
+   wire                       op_itof;
    reg   [15:0]               facc;
    reg   [15:0]               f0;
    reg   [15:0]               f1;
@@ -443,12 +447,12 @@ module lisa_core
    assign op_ldz      = inst[`PWORD_SIZE-1 -: 12] == 12'b10_1000_0001_10;
    assign op_notz     = inst[`PWORD_SIZE-1 -: 14] == 14'b10100000011101;
 `ifdef WANT_BF16
-   assign op_tfa      = inst[`PWORD_SIZE-1 -: 15] == 15'b101000011110000;
    assign op_taf      = inst[`PWORD_SIZE-1 -: 15] == 15'b101000011110001;
    assign op_fmul     = inst[`PWORD_SIZE-1 -: 14] == 14'b10100001111001;
    assign op_fadd     = inst[`PWORD_SIZE-1 -: 14] == 14'b10100001111010;
    assign op_fneg     = inst[`PWORD_SIZE-1 -: 14] == 14'b10100001111011;
    assign op_fswap    = inst[`PWORD_SIZE-1 -: 14] == 14'b10100001111100;
+   assign op_itof     = inst[`PWORD_SIZE-1 -: 14] == 14'b10100011001000;
 `endif
    assign op_brk      = WANT_DBG ? inst[`PWORD_SIZE-1 -: 14] == 14'b10100000011111 : 1'b0;
    assign op_div      = WANT_DIV ? inst[`PWORD_SIZE-1 -: 12] == 12'b10_1000_110000 : 1'b0;
@@ -1547,6 +1551,7 @@ module lisa_core
    ==================================================
    */
 `ifdef WANT_BF16
+   wire [15:0] itof_val;
    always @(posedge clk)
    begin
       if (~rst_n)
@@ -1588,6 +1593,7 @@ module lisa_core
                2'h3: f3 <= facc;
                endcase
             end
+         op_itof: facc <= itof_val;
          endcase
       end
    end
@@ -1615,6 +1621,13 @@ module lisa_core
       .a_in    ( facc          ),
       .b_in    ( fmul_op2      ),
       .result  ( fmul_result   )
+   );
+
+   itobf16 i_itobf16
+   (
+      .in       ( facc         ),
+      .is_signed( amode[1]     ),
+      .bf16_out ( itof_val     )
    );
 `endif
 

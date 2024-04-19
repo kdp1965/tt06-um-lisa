@@ -19,7 +19,6 @@ module fadd
    wire [`EXP_W-1:0] exponent_diff;
 
    wire [`M_W:0] significand_b_add;
-   wire [`EXP_W-1:0] exponent_b_add;
 
    wire [`M_W+1:0] significand_add;
    wire [16-2:0] add_sum;
@@ -46,13 +45,10 @@ module fadd
    //Shifting significand_b to the right according to exponent_diff. Exapmle: if we have 1.0101 >> 2 = 0.0101 then exponent_diff = 2 and significand_b_add = significand_b >> exponent_diff
    assign significand_b_add = significand_b >> exponent_diff;
 
-   //Adding exponent_diff to exponent_b. Exapmle: if we have 1.0101 << 2 = 101.01 then exponent_diff = 2 and exponent_b_add = exponent_b + exponent_diff
-   assign exponent_b_add = operand_b[16-2:`M_W] + exponent_diff; 
-
    //------------------------------------------------ADD BLOCK------------------------------------------//
    //if we are adding(operation_sub_addBar=1) need to add significand_b_add to significand_a. 
    //Or sets the significand to zero if the signs are different(this means we are doing subtraction), effectively determining the core operation of the floating-point addition based on the sign of the operands.
-   assign significand_add = ( operation_sub_addBar) ? (significand_a + significand_b_add) : {(`M_W+2){1'b0}}; 
+   assign significand_add = ( operation_sub_addBar) ? (significand_a + significand_b_add) : (significand_a - significand_b_add);  //{(`M_W+2){1'b0}}; 
 
    //Taking care of the resulting mantissa. 
    //If there is a carry, then the result is normalized by shifting the significand right by one bit(because its implied) and incrementing the exponent by one.
@@ -144,3 +140,66 @@ module fmul
 endmodule
 
 
+module itobf16
+(
+  input  wire signed [15:0] in,
+  input  wire               is_signed,
+  output reg        [15:0] bf16_out
+);
+
+   // First we convert to 32-bit float, then round and truncate to 
+   // bfloat16 format since they have the same exponent format.
+   reg  [31:0]  pre_round;
+   reg  [31:0]  out32;
+   reg  [15:0]  sig;
+   wire [15:0]  mask;
+   reg  [7:0]   exp;
+   
+   assign mask = 16'hFFFF;
+
+   always @(*)
+   begin
+      pre_round = 32'h0;
+      out32     = 32'h0;
+      exp       = 8'h0;
+      bf16_out  = 16'h0;
+
+      // If signed, we need the absolute value
+      if (is_signed)
+         sig = in[15] ? ~in + 1 : in;
+      else
+         sig = in;
+      
+      // Test for zero case
+      if (in == 0)
+      begin
+         bf16_out = 16'h0000;
+      end
+      else
+      begin
+         integer i;
+         exp = 0;
+         for (i = 8; i > 0; i = i >> 1)
+         begin
+            if ((sig & (mask << (16 - i))) == 0)
+            begin
+               sig = sig << i;
+               exp = exp | 8'(i);
+            end
+         end
+            
+         // Calculate pre-rounded value
+         exp = 142 - exp;
+         pre_round = {(is_signed ? in[15] : 1'b0), exp, sig[14:0], 8'h0};
+
+         // Now convert to bfloat16 by rounding and dropping the lower 16 bits
+         if (is_signed & in[15])
+            out32 = pre_round - 32'h00008000;
+         else
+            out32 = pre_round + 32'h00008000;
+
+         // Keep the upper 16 bits
+         bf16_out = out32[31:16];
+      end
+   end
+endmodule

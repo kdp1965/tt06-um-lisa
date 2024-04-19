@@ -88,6 +88,8 @@ SUCH DAMAGE.
 //
 // ==============================================================================
 
+`define WANT_UART2
+
 module lisa_io_mux
 (
    input   wire            clk,
@@ -106,9 +108,16 @@ module lisa_io_mux
    input  wire [15:0]      output_mux_bits,     // Output select bits per output
    input  wire [7:0]       io_mux_bits,         // I/O select bits per output
 
+   // Debug UART signals                                                             
    input  wire             rx1,
    input  wire             rx2,
    input  wire             rx3,
+
+`ifdef WANT_UART2
+   // UART2 signals
+   output wire             uart2_rx,
+   input  wire             uart2_tx,
+`endif
 
    // QSPI I/O signals
    input  wire             sclk,                // SPI clock input
@@ -177,6 +186,14 @@ module lisa_io_mux
                      rx_sel == 2'h3 ? rx3 :           // Input from PMOD Custom board
                      1'b1;                            // No RX data
 
+`ifdef WANT_UART2
+   // UART2 signals
+   assign uart2_rx = out_mux_sel[0] == 2'h2 ? ui_in[0] : 
+                     out_mux_sel[1] == 2'h2 ? ui_in[1] :
+                     out_mux_sel[2] == 2'h2 ? ui_in[2] :
+                     1'b1;
+`endif
+
    // ==========================================================================
    // Generate output pin MUX for each output pin
    // ==========================================================================
@@ -202,15 +219,21 @@ module lisa_io_mux
    endgenerate
 
    // Assign default outputs
-   assign out_default[3:0] = ena ? uio_in[3:0] : 4'h0;
+   assign out_default[0] = baud_ref;
+   assign out_default[3:1] = ena ? uio_in[3:1] : 4'h0;
    assign out_default[4] = rx_sel == 2'h1 ? debug_tx : 1'b1;
-   assign out_default[6:5] = 2'h0;
-   assign out_default[7] = baud_ref;
+   assign out_default[7:5] = 3'h0;
 
    // Assign peripheral select 1 signals
+`ifdef WANT_UART2
+   assign periph_sel1[0] = uart2_tx;
+   assign periph_sel1[1] = uart2_tx;
+   assign periph_sel1[2] = uart2_tx;
+`else
    assign periph_sel1[0] = 1'b0;
    assign periph_sel1[1] = 1'b0;
    assign periph_sel1[2] = 1'b0;
+`endif
    assign periph_sel1[3] = 1'b0;
    assign periph_sel1[4] = rx_sel == 2'h1 ? debug_tx : 1'b1;
    assign periph_sel1[5] = 1'b0;

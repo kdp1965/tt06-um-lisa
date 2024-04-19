@@ -29,6 +29,7 @@ SUCH DAMAGE.
 */
 
 `define TIMER2
+`define WANT_UART2
 
 /*
 ==========================================================================================
@@ -73,6 +74,9 @@ module lisa_periph
 (
    input                clk,
    input                rst_n,
+`ifdef WANT_UART2
+   input                rst_async_n,
+`endif
 
    // UART access
    input  [6:0]         d_addr,
@@ -96,6 +100,12 @@ module lisa_periph
    input  wire [7:0]    uart_rx_d,
    input  wire          uart_rx_data_avail,
    input  wire          uart_tx_buf_empty,
+
+`ifdef WANT_UART2
+   // UART 2
+   input  wire          uart2_rx,
+   output wire          uart2_tx,
+`endif
 
    // I2C
    input  wire          scl_pad_i,
@@ -130,6 +140,19 @@ module lisa_periph
    wire                 sda_oen_n;
    wire                 scl_oen_n;
 
+`ifdef WANT_UART2
+   // UART
+   wire [7:0]    uart2_tx_d;
+   wire          uart2_tx_wr;
+   wire          uart2_rx_rd;
+   wire [7:0]    uart2_rx_d;
+   wire          uart2_rx_data_avail;
+   wire          uart2_tx_buf_empty;
+   wire          uart2_brg_wr;
+   wire [7:0]    uart2_brg_d;
+   reg           uart2_autobaud_disable;
+`endif
+
    always @(posedge clk)
    begin
       if (~rst_n)
@@ -152,6 +175,9 @@ module lisa_periph
          ms2_tick     <= 8'h0;
          ms2_enable   <= 1'h0;
          ms2_rollover <= 1'b0;
+`endif
+`ifdef WANT_UART2
+         uart2_autobaud_disable <= 1'b0;
 `endif
       end
       else
@@ -304,6 +330,11 @@ module lisa_periph
             ms2_count <= 16'h0; 
          end
 `endif
+`ifdef WANT_UART2
+         // UART2 autobaud disable
+         if (d_periph && d_we && d_addr == 7'h13)
+            uart2_autobaud_disable <= d_i[2];
+`endif
       end
    end
 
@@ -339,6 +370,12 @@ module lisa_periph
       7'h10:   d_o_r = uart_rx_d;
       7'h11:   d_o_r = {6'h0, uart_tx_buf_empty, uart_rx_data_avail};
 
+`ifdef WANT_UART2
+      // UART2 read
+      7'h12:   d_o_r = uart2_rx_d;
+      7'h13:   d_o_r = {5'h0, uart2_autobaud_disable, uart2_tx_buf_empty, uart2_rx_data_avail};
+`endif
+
       // Timer2 readback
 `ifdef TIMER2
       7'h18:   d_o_r = ms2_prediv[7:0];
@@ -359,6 +396,14 @@ module lisa_periph
    assign uart_tx_wr = d_periph && d_we && d_addr == 7'h10;
    assign uart_rx_rd = d_periph && d_rd && d_addr == 7'h10;
    assign uart_tx_d  = d_i;
+
+`ifdef WANT_UART2
+   assign uart2_tx_wr = d_periph && d_we && d_addr == 7'h12;
+   assign uart2_rx_rd = d_periph && d_rd && d_addr == 7'h12;
+   assign uart2_tx_d  = d_i;
+   assign uart2_brg_wr= d_periph && d_rd && d_addr == 7'h14;
+   assign uart2_brg_d = d_i;
+`endif
 
    // ==============================================
    // Instantiate I2C master
@@ -383,5 +428,25 @@ module lisa_periph
    assign sda_padoen_o  = ~sda_oen_n;
 
    assign d_o = d_o_r | i2c_d_o;
+
+`ifdef WANT_UART2
+   lisa_uart i_lisa_uart_2
+   (
+      .clk              ( clk                    ),
+      .rst_n            ( rst_n                  ),
+      .rst_async_n      ( rst_async_n            ),
+      .rx               ( uart2_rx               ),
+      .tx               ( uart2_tx               ),
+      .tx_d             ( uart2_tx_d             ),
+      .tx_wr            ( uart2_tx_wr            ),
+      .rx_rd            ( uart2_rx_rd            ),
+      .rx_d             ( uart2_rx_d             ),
+      .rx_data_avail    ( uart2_rx_data_avail    ),
+      .tx_buf_empty     ( uart2_tx_buf_empty     ),
+      .brg_wr           ( uart2_brg_wr           ),
+      .brg_d            ( uart2_brg_d            ),
+      .autobaud_disable ( uart2_autobaud_disable )
+   );
+`endif
 endmodule
 

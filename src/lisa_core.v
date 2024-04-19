@@ -87,12 +87,19 @@ Uses a 14 (or 16) bit program word.  Shown is the 14-bit version.  For 16-bit, e
     10 1000 01101c10   subax                Subtract acc from IX with borrow
     10 1000 01101011   subaxu               Subtract acc from IX MSB
     10 1000 01110iii   ldac                 Load a with condtion flag
+    10 1000 01111ooooo Fops                 Floating Point ops
     10 1000 10sttccc   if    type, cond     Set cond processing based on type and condition
     10 1000 110000dv   div                  Do signed/unsigned division (depending on amode[1])
     10 1000 110001dv   rem                  Do signed/unsigned remainder (depending on amode[1])
     10 1001 xxxxxxxx   cpi   a,#imm8        Compare A with immediate data, signed/unsigned depending on amode[1]
 
-  Register push/pop
+  Floating Point ops
+    10 1000 01111000 0h tfa                 Transfer facc (half) to acc
+    10 1000 01111000 1h taf                 Transfer a to facc (half)
+    10 1000 01111010 ff fmul                Float mult facc * fx.  Result in facc
+    10 1000 01111011 ff fadd                Float add  facc + fx.  Result in facc
+    10 1000 01111100 ff fneg                Negate fx.  Result in fx
+    10 1000 01111101 ff fswqp               Swap facc and fx.
 
   Relative branch
     10 101b bbbbbbbb   bz    #imm9          Branch (+255 / -256) if zflag == 0
@@ -135,6 +142,7 @@ Uses a 14 (or 16) bit program word.  Shown is the 14-bit version.  For 16-bit, e
 */
 
 `define PWORD_SIZE      16
+`define WANT_BF16
 
 module lisa_core
 #(
@@ -143,7 +151,7 @@ module lisa_core
       parameter PC_BITS        = 15,
       parameter D_BITS         = 15,       // NOTE: Up to PC_BITS
       parameter WANT_DBG       = 1,
-      parameter DBG_BRKPOINTS  = 4
+      parameter DBG_BRKPOINTS  = 6
 )
 (
    input                      clk,
@@ -322,6 +330,23 @@ module lisa_core
    wire                       op_or;
    wire                       op_xor;
    wire                       op_ldax;
+`ifdef WANT_BF16
+   wire                       op_tfa;
+   wire                       op_taf;
+   wire                       op_fmul;
+   wire                       op_fadd;
+   wire                       op_fneg;
+   wire                       op_fswap;
+   reg   [15:0]               facc;
+   reg   [15:0]               f0;
+   reg   [15:0]               f1;
+   reg   [15:0]               f2;
+   reg   [15:0]               f3;
+   reg   [15:0]               fx[3:0];
+   wire  [15:0]               fmul_result;
+   wire  [15:0]               fadd_result;
+   wire  [7:0]                f_half[1:0];
+`endif
    reg   [1:0]                div_args;
    (* keep = "true" *)
    wire  [15:0]               div_divisor;
@@ -417,6 +442,14 @@ module lisa_core
    assign op_shr16    = inst[`PWORD_SIZE-1 -: 12] == 12'b10_1000_0000_11;
    assign op_ldz      = inst[`PWORD_SIZE-1 -: 12] == 12'b10_1000_0001_10;
    assign op_notz     = inst[`PWORD_SIZE-1 -: 14] == 14'b10100000011101;
+`ifdef WANT_BF16
+   assign op_tfa      = inst[`PWORD_SIZE-1 -: 15] == 15'b101000011110000;
+   assign op_taf      = inst[`PWORD_SIZE-1 -: 15] == 15'b101000011110001;
+   assign op_fmul     = inst[`PWORD_SIZE-1 -: 14] == 14'b10100001111001;
+   assign op_fadd     = inst[`PWORD_SIZE-1 -: 14] == 14'b10100001111010;
+   assign op_fneg     = inst[`PWORD_SIZE-1 -: 14] == 14'b10100001111011;
+   assign op_fswap    = inst[`PWORD_SIZE-1 -: 14] == 14'b10100001111100;
+`endif
    assign op_brk      = WANT_DBG ? inst[`PWORD_SIZE-1 -: 14] == 14'b10100000011111 : 1'b0;
    assign op_div      = WANT_DIV ? inst[`PWORD_SIZE-1 -: 12] == 12'b10_1000_110000 : 1'b0;
    assign op_rem      = WANT_DIV ? inst[`PWORD_SIZE-1 -: 12] == 12'b10_1000_110001 : 1'b0;
@@ -538,6 +571,10 @@ module lisa_core
       14'b10100000000110:   {acc_ld_misc, acc_misc} = {1'b1, ix_cond, ix[(PC_BITS-1):8]};    // taxu
       14'b10100011000???:   {acc_ld_misc, acc_misc} = {div_ready, div_result[7:0]};          // div,etc
       14'b10100001110???:   {acc_ld_misc, acc_misc} = {1'b1, 7'h0, cond_load};               // ldac
+`ifdef WANT_BF16
+      14'b10100001111000: if (inst[1] == 1'b0)
+                            {acc_ld_misc, acc_misc} = {1'b1, f_half[inst[0]]};             // tfa
+`endif
       default:              {acc_ld_misc, acc_misc} = 9'h0;
       endcase
    end
@@ -1497,6 +1534,89 @@ module lisa_core
       assign dbg_halted   = 1'b0;
    end
    endgenerate
+
+   /*
+   ==================================================
+   Floating point (Brain float) operations
+
+    op_tfa                 Transfer facc (half) to acc
+    op_taf                 Transfer a to facc (half)
+    op_fmul                Float mult facc * fx.  Result in facc
+    op_fadd                Float add  facc + fx.  Result in facc
+    op_fswqp               Swap facc and fx.
+   ==================================================
+   */
+`ifdef WANT_BF16
+   always @(posedge clk)
+   begin
+      if (~rst_n)
+      begin
+         // Zero the floating point registers
+         facc <= 16'h0;
+         f0 <= 16'h0;
+         f1 <= 16'h0;
+         f2 <= 16'h0;
+         f3 <= 16'h0;
+      end
+      else
+      begin
+         // Load operations for floating point registers
+         if (exec_state && cond[0])
+         case (1'b1)
+         op_taf:
+            begin
+               case (inst[0])
+               1'h0:    facc[7:0]  <= acc;
+               1'h1:    facc[15:8] <= acc;
+               endcase
+            end
+         op_fmul: facc <= fmul_result;
+         op_fadd: facc <= fadd_result;
+         op_fneg: case (inst[1:0])
+                  2'h0:  f0[15] <= ~f0[15];
+                  2'h1:  f1[15] <= ~f1[15];
+                  2'h2:  f2[15] <= ~f2[15];
+                  2'h3:  f3[15] <= ~f3[15];
+                  endcase
+         op_fswap:
+            begin
+               facc <= fx[inst[1:0]];
+               case (inst[1:0])
+               2'h0: f0 <= facc;
+               2'h1: f1 <= facc;
+               2'h2: f2 <= facc;
+               2'h3: f3 <= facc;
+               endcase
+            end
+         endcase
+      end
+   end
+
+   assign f_half[0] = facc[7:0];
+   assign f_half[1] = facc[15:8];
+   assign fx[0] = f0;
+   assign fx[1] = f1;
+   assign fx[2] = f2;
+   assign fx[3] = f3;
+   wire [15:0] fadd_op2;
+   wire [15:0] fmul_op2;
+
+   assign fadd_op2 = fx[inst[1:0]] & {16{op_fadd}};
+   fadd i_fadd
+   (
+      .a_in    ( facc          ),
+      .b_in    ( fadd_op2      ),
+      .result  ( fadd_result   )
+   );
+
+   assign fmul_op2 = fx[inst[1:0]] & {16{op_fmul}};
+   fmul i_fmul
+   (
+      .a_in    ( facc          ),
+      .b_in    ( fmul_op2      ),
+      .result  ( fmul_result   )
+   );
+`endif
 
 `ifdef SIMULATION
    reg [63:0] ascii_instr;

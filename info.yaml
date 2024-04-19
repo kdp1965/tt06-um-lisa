@@ -35,6 +35,8 @@ project:
     - "inst_cache.v"
     - "i2c_master_byte_ctrl.v"
     - "i2c_master_bit_ctrl.v"
+    - "lisa_uart.v"
+    - "fops.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:

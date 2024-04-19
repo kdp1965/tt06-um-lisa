@@ -64,6 +64,8 @@ SUCH DAMAGE.
 //
 // ==============================================================================
 
+`define WANT_UART2
+
 module tt_um_lisa
 (
 `ifdef USE_POWER_PINS
@@ -171,6 +173,11 @@ module tt_um_lisa
    reg                  rx1_r1, rx1_r2;
    reg                  rx2_r1, rx2_r2;
    reg                  rx3_r1, rx3_r2;
+
+`ifdef WANT_UART2
+   wire                 uart2_rx;
+   wire                 uart2_tx;
+`endif
 
    // ==========================================================================
    // Lisa I2C
@@ -484,6 +491,9 @@ module tt_um_lisa
    (
       .clk                       ( clk                       ),
       .rst_n                     ( rst_n_r[2]                ),
+`ifdef WANT_UART2
+      .rst_async_n               ( rst_async_n_r[2]          ),
+`endif
                                                              
       // Data bus                                            
       .d_i                       ( d_o                       ),
@@ -507,6 +517,11 @@ module tt_um_lisa
       .uart_rx_d                 ( lisa_rx_d                 ),
       .uart_rx_data_avail        ( lisa_rx_data_avail        ),
       .uart_tx_buf_empty         ( lisa_tx_buf_empty         ),
+
+`ifdef WANT_UART2
+      .uart2_rx                  ( uart2_rx                  ),
+      .uart2_tx                  ( uart2_tx                  ),
+`endif
                                                              
       // I2C signals                                         
       .scl_pad_i                 ( scl_pad_i                 ),
@@ -754,7 +769,7 @@ module tt_um_lisa
    end
 
    // ==========================================================================
-   // Instantiate the debug controller
+   // Instantiate the autobaud detector
    // ==========================================================================
    debug_autobaud i_debug_autobaud
    (
@@ -791,9 +806,16 @@ module tt_um_lisa
       .output_mux_bits           ( output_mux_bits           ),
       .io_mux_bits               ( io_mux_bits               ),
 
+      // Debug UART signals
       .rx1                       ( rx1_r2                    ), // Input from the UART
       .rx2                       ( rx2_r2                    ), // Input from the UART
       .rx3                       ( rx3_r2                    ), // Input from the UART
+
+      // UART2 signals
+`ifdef WANT_UART2
+      .uart2_rx                  ( uart2_rx                  ),
+      .uart2_tx                  ( uart2_tx                  ),
+`endif
 
       // QSPI I/O signals
       .sclk                      ( sclk                      ),

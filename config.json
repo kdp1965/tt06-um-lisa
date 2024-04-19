@@ -7,8 +7,9 @@
                     "src/lisa_rx8n.v",      "src/lisa_tx8n.v",
                     "src/debug_ctrl.v",     "src/debug_autobaud.v",
                     "src/debug_brg.v",      "src/debug_regs.v",
-                    "src/data_cache8.v",     "src/lisa_i2c.v",
-                    "src/inst_cache.v",
+                    "src/data_cache8.v",    "src/lisa_i2c.v",
+                    "src/inst_cache.v",     "src/lisa_uart.v",
+                    "src/fops.v",
                     "src/i2c_master_bit_ctrl.v", "src/i2c_master_byte_ctrl.v"],
   "EXTRA_VERILOG_MODELS": ["src/RAM32.v"],
 
@@ -49,8 +50,8 @@
   },
 
   "FP_SIZING": "absolute",
-  "DIE_AREA": [0, 0, 1030.40, 225.76],
-  "FP_DEF_TEMPLATE": "dir::tt/def/tt_block_6x2_pg.def",
+  "DIE_AREA": [0, 0, 1378.16, 225.76],
+  "FP_DEF_TEMPLATE": "dir::tt/def/tt_block_8x2_pg.def",
 
   "//": "use alternative efabless decap cells to solve LI density issue",
   "DECAP_CELL": [
@@ -70,7 +71,7 @@
   "RT_MAX_LAYER": "met4",
 
   "ROUTING_CORES": 8,
-  "PL_TARGET_DENSITY_PCT": 70,
+  "PL_TARGET_DENSITY_PCT": 58,
   "GRT_ALLOW_CONGESTION" : true,
   "PL_RESIZER_MAX_SLEW_MARGIN" : 20.0,
   "GLB_RESIZER_MAX_SLEW_MARGIN" : 20.0,

@@ -63,7 +63,7 @@
   ],
 
   "//": "period is in ns, so 50ns == 20mHz",
-  "CLOCK_PERIOD": 45,
+  "CLOCK_PERIOD": 50,
   "CLOCK_PORT": "clk",
 
   "//": "don't use power rings or met5",

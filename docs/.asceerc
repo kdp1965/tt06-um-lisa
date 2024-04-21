@@ -1,0 +1,68 @@
+{# ================================================== }
+{# Common attributte definitions across all test      }
+{# cases.  This could be used to create a dictionary  }
+{# of common attributes used across all diagrams in   }
+{# a file (datasheet) to make everything look uniform.}
+{# ================================================== }
+
+{# Define blue blend Paint }
+{:pb blend cC0C0FF cE0E0FF text cBLK line cBLA border cBLK border-width 0}
+
+{# Define yellow blend Paint }
+{:py blend cE0E090 cFFFFB0 stroke 0 text cBLK line cBLK}
+
+{# Define red/pink blend Paint }
+{:pr blend cFFC0C0 cFFE8E8 stroke 1 text cBLK line cBLK}
+
+{# Define white blend paint}
+{:pw blend cE8E8E8 cF8F8F8 stroke 1 text cBLK line cBLK}
+
+{# Define tan blend paint}
+{:pt blend cE2C49C cFADCB4 stroke 1 text cBLK}
+
+{# Define Annotation Line with arrow at the end}
+{:a* begin-type arrow end-type arrow}
+
+{# Define Annotation Line with dash drawing style}
+{:d* line-style dash begin-type dot end-type arrow end-xoffset 3 line cBLUE}
+
+{# ================================================== }
+{# Set Mux border stroke width to 0                   }
+{# ================================================== }
+{:MUX stroke 0 }
+
+{# ================================================== }
+{# Set ADC global paint                               |
+{# ================================================== }
+{:ADC blend pb stroke 0 }
+
+{# ================================================== }
+{# Set DAC global paint                               }
+{# ================================================== }
+{:DAC blend pr stroke 0 }
+
+{# Set background for waveform containers }
+{:WAVE fill cALM text cBLK line cBLK}
+{:WAVEFIELD blend pb text cBLK line cBLK border cBLK}
+
+{:DIAMOND fill pt}
+
+{# ================================================== }
+{# Define wild Paint for test                         }
+{# ================================================== }
+{:tp fill cRED 
+     line cGRE 
+     text cWHI 
+     border cPURPLE 
+     border-width 3 }
+
+{# ================================================== }
+{# Give cloud logic a light blue color                }
+{# ================================================== }
+{:cl blend cE8E8FF cF8F8FF stroke 0 text cBLK}
+
+{# ================================================== }
+{# Set default PNG generation to 1.5x size            }
+{# ================================================== }
+{:FILE scale 1.0 type PNG }
+

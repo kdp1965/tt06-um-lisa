@@ -60,6 +60,8 @@ I/O pins are auto-detected by the debug_autobaud module from the following choic
     uio_in[4] / uio_out[5]    LISA PMOD board (I am developing)
     uio_in[6] / uio_out[5]    Standard UART PMOD
 
+![](debug_uart.png)
+
 The RX/TX pair port is auto-detected after reset by the autobaud circuit, and the UART baud rate can either be
 configured manually or auto detected by the autobaud module.  After reset, the ui_in[7] pin is sampled to determine
 the baud rate selection mode.  If this input pin is HIGH, then autobaud is disabled and ui_in[6:0] is sampled as
@@ -121,8 +123,9 @@ ADDR  Description                  ADDR  Description
 
 ### LISA Processor Interface Details
 
-The LISA Core requires external memory for all Instructions and Data (well, sort of for data).  To
-accomodate this, the design uses a QSPI controller that is configurable as either single SPI or
+The LISA Core requires external memory for all Instructions and Data (well, sort of for data, the
+data CACHE can be disabled then it just uses internal DFFRAM).  To accomodate external memory,
+the design uses a QSPI controller that is configurable as either single SPI or
 QUAD SPI, Flash or SRAM access, 16-Bit or 24-Bit addressing, and selectable Chip Enable for each
 type of access.  To achieve this, a QSPI arbiter is used to allow multiple accessors as shown in
 the following diagram:
@@ -165,9 +168,9 @@ in Debug config register 0x10 and 0x11, then performing read or write to address
 Reading from Debug config register 0x22 will perform a special mode read of QSPI register 0x05 (the FLASH
 status register).
 
-Data access to the QSPI arbiter from from the Data CACHE interface, enabling a 32K address space for data.  However
-the design has a CACHE disable mode that directs all Data accesses directly to the internal 128 Byte SRAM, thus
-eliminating the need for external SRAM (and limiting the data bus to 128 bytes).
+Data access to the QSPI arbiter come from the Data CACHE interface (described later), enabling a 32K address
+space for data.  However the design has a CACHE disable mode that directs all Data accesses directly to the
+internal 128 Byte RAM, thus eliminating the need for external SRAM (and limiting the data bus to 128 bytes).
 
 ### Programming the QSPI Controller
 
@@ -211,7 +214,7 @@ be programmed to indicate the nature of the external device(s).  This is accompi
 
    1. Program the LISA1, LISA2 and Debug CE Select registers (0x14, 0x15, 0x16) indicating which CE to use.
       -  0x14, 0x15, 0x16:  {6'h0, ce1_en, ce0_en} Active HIGH
-\clearpage
+
    2. Program the LISA1 and LISA2 base addresses if they use the same SRAM:
       -  0x12: {LISA1_BASE, 8'h0} | {8'h0, PC}
       -  0x13: {LISA2_BASE, 8'h0} | {8'h0, DATA_ADDR}
@@ -234,13 +237,268 @@ be programmed to indicate the nature of the external device(s).  This is accompi
    7. For QSPI FLASH, set the QSPI Write opcode (it is different for various Flashes):
       -  0x19: {8'h0, quad_write_cmd}
 
-\clearpage
+NOTE: For register 0x1E (SPI Clock Div and CE Delay), there is only a single register, meaning this
+      register value applies to both CE outputs.  Delaying the clock of one CE will delay both,
+      and adding delay between CE activations does not keep track of which CE was activated.
+      So if two CE outputs are used and a CE delay is programmed, it will enforce that delay
+      even if a different CE is used.  This setting is really in place for use when the RP2040
+      emulation is being used in a single CE SRAM mode only (i.e. you have no external PMOD
+      with a real SRAM / FLASH chip.  In the case of real chips on a PMOD, SCLK and CE delays
+      (most likely) are not needed.  The Tech Page on the Tiny Tapeout regarding RP2040 SPI SRAM
+      emulation indicates a delay between CE activations is likely needed, so this setting is 
+      provided in case it is needed.
 
 ## Architecture Details
 
-The following is a simplified block diagram of the LISA processor core:
+Below is a simplified block diagram of the LISA processor core.  It uses an 8-bit accumulator for most of
+its operations with the 2nd argument predominately coming from either immediate data in the instruction
+word or from a memory location addressed by either the Stack Pointer (SP) or Index Register (IX).
+
+There are also instructions that work on the 15-bit registers PC, SP, IX and RA (Return Address).  As
+well as floating point operations. These will be covered in the sections to follow.
 
 ![](lisa_arch.png)
+
+### Addressing Modes
+
+Like most processors, LISA has a few different addressing modes to get data in and out of the core.  These
+include the following:
+
+Mode      Data                   Description
+----      ----                   -----------
+Register  Rx[n -: 8]             Transfers between registers (ix, ra, facc, etc.).
+Direct    inst[n:0]              N-bit data stored directly in the instruction word.
+NextOp    (inst+1)[14:0]         Data stored in the NEXT instruction word (2 cycle).
+Indirect  mem[inst[n:0]]         The address of the data is in the instruction word.
+Periph    periph[inst[n:0]]      Accesses to the peripheral bus.
+Indexed   mem[sp/ix+inst[n:0]]   The SP or IX register is added to a fixed offset.
+Stack     mem[sp]                Current stack pointer points to the data (push/pop).
+
+### The Control Registers
+
+To run meaninful programs, the Program Counter (PC) and Stack Pointer (SP) must
+be set to useful values for accessing program instructions and data.  The PC is automatically reset
+to zero by rst_n, so that one is pretty much automatic.  All programs start at address zero (plus 
+any base address programmed by the Debug Controller). But as far as the LISA core is concerned, it
+knows nothing of base addresses and believes it is starting at address zero.
+
+Next is to program the SP to point to a useful location in memory.  The Stack is a place where C 
+programs store their local variable values and also where we store the Return Address (RA) if we need
+to call nested routines, etc.  The stack grows down, meaning it starts at a high
+RAM address and decrements as things are added to the stack.  Therefore the SP should be programmed
+with an address in upper RAM.  LISA supports different Data bus modes through it's CACHE controller,
+including CACHE disable where it can only access 128 bytes.  But for this example, let's assume we have
+a full range of 32K SRAM available.  The LISA ISA doesn't have an opcode for loading the SP directly.
+Instead it can load the IX register directly with a 15-bit value using NextOp addressing, and it
+supports "xchg" opcodes to exchange the IX register with either the SP or RA.
+So to load the SP, we would write:
+
+    Example:
+      ldx     0x7FFF      // Load IX with value in next opcode
+      xchg_sp             // Exchange IX with SP
+
+The IX register can be programmed as needed to access other data within the Data Bus address range. This
+register is useful especially for accessing structures via a C pointer.  The IX then becomes the value
+of the pointer to RAM, and Indexed addressing mode allows fixed offsets from that pointer (i.e. structure
+elements) to be accessed for read/write.
+
+Loading the PC indirectly can be done using the "jmp ix" opcode which does the operation pc <= ix.  Loading
+ix from the pc directly is not supported, though this can be accomplished using a function call and opcodes 
+to save RA (sra) and pop ix:
+
+     Example:
+       get_pc:
+         sra         // Push RA to the stack (Save RA)
+         pop_ix      // Pop IX from the stack
+         ret         // Return. Upon return, IX is the same as PC
+
+### Conditional Flow Processing
+
+Program flow is controlled using flags (zero, carry, sign), arithemetic mode (amode) and condition
+flags (cond) to determine when program branches should occur.  Specific opcode update the flags and
+condition registers based on results of the operation (AND, OR, IF, etc.).  Then conditional branches
+are made using bz, bnz and if (and variants ifte "if-then-else" and iftt "if-then-then").  Also 
+available are rc "Return if Carry" and rz "Return if Zero", though these are less useful in C programs
+as typically a routine uses local variables and the stack must be restored prior to return, mandating
+a branch to the function epilog to restore the stack and often the return address.  Below is a list
+of the opcodes used for conditional program processing:
+
+Legend for operations below:
+
+ - acc_val = inst[7:0]
+ - pc_jmp = inst[14:0]
+ - pc_rel = pc + sign_extend(inst[10:0])
+
+Opcode   Operation        Encoding              Description
+------   ---------        --------              -----------
+jal      pc <= pc_jmp     0aaa_aaaa_aaaa_aaaa   Jump And Link (call).
+         ra <= pc                                 
+ret      pc <= ra         1000_1010_0xxx_xxxx   Return
+reti     pc <= ra         1000_11xx_iiii_iiii   Return Immediate.
+         acc <= acc_val                         
+br       pc <= pc_rel     1011_0rrr_rrrr_rrrr   Branch Always
+bz       pc <= pc_rel     1011_1rrr_rrrr_rrrr   Branch if Zero.
+         if zero=1                              
+bnz      pc <= pc_rel     1010_1rrr_rrrr_rrrr   Branch if Not Zero.
+         if zero=0                              
+rc       pc <= ra         1000_1011_0xxx_xxxx   Return if Carry
+         if carry=1                             
+rz       pc <= ra         1000_1011_1xxx_xxxx   Return if Zero
+         if zero=1                              
+call_ix  pc <= ix         1000_1010_100x_xxxx   Call indirect via IX
+         ra <= pc                               
+jump_ix  pc <= ix         1000_1010_101x_xxxx   Jump indirect via IX
+if       cond <= ??       1010_0010_0000_0ccc   If.  See below.
+iftt     cond <= ??       1010_0010_0000_1ccc   If then-then.  See below.
+ifte     cond <= ??       1010_0010_0001_0ccc   If then-else.  See below.
+
+### The IF Opcode
+
+The "if" opcode and it's variants "if-then-then" and "if-then-else" control program flow in a slightly
+different manner than the others.  Instead of affecting the value of the PC directly, they set the two
+condition bits "cond[1:0]" to indicate which (if any) of the two following opcodes should be executed.
+the cond[0] bit represents the next instruction and cond[1] represents the instruction following that. All
+three "if" forms take an argument that checks the current value of the FLAGS to set the condition bits.  The
+argument is encoded as the lower three bits of the instruction word ard operate as shown in the following table:
+
+Condition    Test               Encoding    Description
+---------    ----               --------    -----------
+EQ           zflag=1            3'h0        Execute if Equal
+NE           zflag=0            3'h1        Execute if Not Equal
+NC           cflag=0            3'h2        Execute if Not Carry 
+C            cflag=1            3'h3        Execute if Carry
+GT           ~cSigned & ~zflag  3'h4        Execute if Greater Than
+LT           cSigned & ~zflag   3'h5        Execute if Less Than
+GTE          ~cSigned | zflag   3'h6        Execute if Greater Than or Equal
+LTE          cSigned | zflag    3'h7        Execute if Less Than or Equal
+
+The "if" opcode will set cond[0] based on the condition above and the cond[1] bit to HIGH.  It only affects
+the single instruction following the "if" opcode.  The "iftt" opcode will set both cond[0] and cond[1] to the
+same value based on the condition above.  It means "if true, execute the next two opcodes".  And the "ifte"
+opcode will set cond[0] based on the condition above and cond[1] to the OPPOSITE value, meaning it will execute
+either the following instruction OR the one after that (then-else).
+
+    Example:
+      ldi      0x41        // Load A immediate with ASCII 'A'
+      cpi      0x42        // Compare A immediate with ASCII 'B'
+      ifte     eq          // Test if the compare was "Equal"
+      jal      L_equal     // Jump if equal
+      jal      L_different // Jump if different
+
+The above code will load the "jal L_equal" opcode but will not execute it since the compare was Not Equal.
+Then it will execute the "jal L_different" opcode.  Note that if the compare were "ifte ne", it would
+call the L_equal function and then upon return would not execute the "L_different" opcode.  This is because 
+the cond[1] code is saved with the Return Address (RA) during the call and restored upon return.  This means
+the FALSE cond[1] code would prevent the 2nd opcode from executing.  As an opcode gets executed, the cond[1]
+value is shifted into the cond[0] location, and the cond[1] is loaded with 1'b1.
+
+### Direct Operations
+
+To do any useful work, the LISA core must be able to load and operate on data.  This is done through the
+accumulator using the various addressing modes.  The diagram below details the Direct addressing mode where
+data is stored directly in the opcode / instruction word:
+
+![](lisa_direct_acc.png)
+\clearpage
+The instructions that use direct addressing are:
+
+Opcode   Operation          Encoding              Description
+------   ---------          --------              -----------
+adc      A <= A + imm + C   1001_00xx_iiii_iiii   ADD immediate with Carry
+ads      SP <= SP + imm     1001_01ii_iiii_iiii   ADD SP + signed immediate
+adx      IX <= IX + imm     1001_10ii_iiii_iiii   ADD IX + signed immediate
+andi     A <= A & imm       1000_01xx_iiii_iiii   AND immediate with A
+cpi      Z,C <= A >= imm    1010_01xx_iiii_iiii   Compare A >= immediate
+cpi      Z,C <= A >= imm    1010_01xx_iiii_iiii   Compare A >= immediate
+
+### Accumulator Indirect Operations
+
+The Accumulator Indirect operations use immediate data in the instruction word to index
+indirectly into Data memory.  That memory address is then used to load, store or both
+load and store (swap) data with the accumulator.
+
+![](lisa_indirect_acc.png)
+
+Opcode   Operation        Encoding              Description
+------   ---------        --------              -----------
+lda      A <= M[imm]      1111_01pi_iiii_iiii   Load A from Memory/Peripheral
+sta      M[imm] <= A      1111_11pi_iiii_iiii   Store A to Memory/Peripheral
+swapi    A <= M[imm]      1101_11pi_iiii_iiii   Swap Memory/Peripheral with A
+         M[imm] <= A
+
+ - p = Select Peripheral (1'b1) or RAM (1'b0)
+ - iiii = Immediate data
+
+### Indexed Operations
+
+Indexed operations use either the IX or SP register plus a fixed offset from the immediate field of the 
+opcode.  The selection to use IX vs SP is also from the opcode[9] bit.  The immediate field is not
+sign extended, so only positive direction indexing is supported.  This was selected because this mode
+is typically used to access either local variables (when using SP) or C struct members (when using IX), 
+and in both cases, negative index offsets aren't very useful.  The following is a diagram of indexed addressing:
+
+![](lisa_indexed.png)
+
+Opcode   Operation           Encoding              Description
+------   ---------           --------              -----------
+add      A <= A+ M[ind]      1100_00si_iiii_iiii   ADD index memory to A
+and      A <= A & M[ind]     1101_00si_iiii_iiii   AND A with index memory
+cmp      A >= M[ind]?        1110_10si_iiii_iiii   Compare A with index memory
+dcx      M[ind] -= 1         1001_11si_iiii_iiii   Decrement the value at index memory
+inx      M[ind] += 1         1110_01si_iiii_iiii   Increment the value at index memory
+ldax     A <= M[ind]         1111_00si_iiii_iiii   Load A from index memory
+ldxx     IX <= M[SP+imm]     1100_110i_iiii_iiii   Load IX from memory at SP+imm
+mul      A <= A*M[ind]L      1100_10si_iiii_iiii   Multiply index memory * A, keep LSB
+mulu     A <= A*M[ind]H      1000_01si_iiii_iiii   Multiply index memory * A, keep MSB
+or       A <= A | M[ind]     1101_10si_iiii_iiii   OR A with index memory
+stax     M[ind] <= A         1111_10si_iiii_iiii   Store A to index memory
+stxx     M[SP+imm] <= IX     1100_111i_iiii_iiii   Save IX to memory at SP+imm
+sub      A <= A-M[ind]       1100_10si_iiii_iiii   SUBtract index memory from A
+swap     A <= M[ind]         1110_11si_iiii_iiii   Swap A with index memory
+         M[ind] <= A
+xor      A <= A ^ M[ind]     1110_00si_iiii_iiii   XOR A with index memory
+
+\clearpage
+Legend for table above:
+
+ - ind = IX or SP + immediate
+ - s = Select IX (zero) or SP (one)
+ - iiii = Immediate data
+
+The Zero and Carry flags are updated for most of the above operations.  The Carry flag is only updated for math operations where a Carry / Borrow could occur.
+
+Carry        Zero
+-----        -----------------
+adc          add    and
+add          or     xor
+sub          cmp    sub 
+cmp          dcx    inx      
+dcx          swap   ldax
+inx          mul    mulu
+             
+    
+### Stack Operations
+
+Stack operations use the current value of the SP register to PUSH and POP items to the stack in
+opcode.  As items are PUSHed to the stack, the SP is decremented after each byte, and as they
+are POPed, the SP is incremented prior to reading from RAM.
+
+![](lisa_stack.png)
+
+Opcode   Operation           Encoding              Description
+------   ---------           --------              -----------
+lra      RA <= M[SP+1]       1010_0001_0110_01xx   Load {cond,RA} from stack
+         SP += 2
+sra      M[SP] <= RA         1010_0001_0110_00xx   Save {cond,RA} to stack
+         SP -= 2
+push_ix  M[SP] <= IX         1010_0001_0110_10xx   Save IX to stack
+         SP -= 2
+pop_ix   IX <= M[SP+1]       1010_0001_0110_11xx   Load IX from stack
+         SP += 2
+push_a   M[SP] <= A          1010_0000_100x_xxxx   Save A to stack
+         SP -= 1
+pop_a    A <= M[SP+1]        1010_0000_110x_xxxx   Load A from stack
+         SP += 1
 
 ## How to test
 
@@ -251,7 +509,7 @@ Also need to download the Python based debugger.
     - Includes limited libraries for crt0, signed int compare, math, etc.
     - Libraries are still a work in progress
   - Linker is fully functional
-  - C compiler is functional (no float support at the moment) but is a work in progress.
+  - C compiler is somewhat functional (no float support at the moment) but has *many* bugs in the generated code and is still a work in progress.
   - Python debugger can erase/program the FLASH, program SPI SRAM, start/stop the LISA core, read SRAM and registers.
 
 \clearpage
@@ -267,3 +525,5 @@ Also need to download the Python based debugger.
   - ce1_latch: CE1 output during Special Mux Mode 3 
   - DQ1/2/3/4: QUAD SPI bidirection data I/O
   - pc_io: LISA GPIO Port C I/O (direction controllable by LISA)
+
+![](lisa_pinout.png)

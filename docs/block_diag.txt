@@ -14,7 +14,7 @@
          V V V  |Sel |  |  HW INT  |{pb}|            |    |     UART2+->                   
      +----------+-+  |  |  MUL/DIV |<-->|            +--->|          |                     
      | {pt}       +--+  \----------/    |    LISA    |    |  Periph  |                     
-     |  ^Debug^   |     /----------\    |    CORE    |    |   {vb}   |                     
+     |  ^Debug^   |     /----------\    |    CORE    |    |   {py}   |                     
      | ^Autobaud^ |     |  bfloat  |{pb}|            |    |          |                     
      +------------+     |  MUL/ADD |<-->|{pb}        +--+ |  Timer1  |                     
                         \----------/    +-+-------+--+  | |  Timer2  |                     
